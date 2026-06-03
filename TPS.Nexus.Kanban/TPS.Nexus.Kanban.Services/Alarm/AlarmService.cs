@@ -109,14 +109,15 @@ public class AlarmService : IAlarmService
                 EquipmentName = equipmentName,
                 Level         = rule.AlarmLevel,
                 Message       = $"{equipmentName}: {config.Name} {rule.Condition.Trim()} {rule.Threshold} (actual: {numVal})",
-                TriggeredAt   = DateTime.UtcNow
+                TriggeredAt   = DateTime.UtcNow,
+                AlarmRuleId   = rule.Id   // AS-1: stored for per-rule dedup
             };
 
             using var conn = _db.CreateConnection();
             record.Id = await conn.ExecuteScalarAsync<int>(
                 """
-                INSERT INTO kanban_alarm_records (EquipmentId, EquipmentName, Level, Message, TriggeredAt)
-                VALUES (@EquipmentId, @EquipmentName, @Level, @Message, @TriggeredAt);
+                INSERT INTO kanban_alarm_records (EquipmentId, EquipmentName, Level, Message, TriggeredAt, AlarmRuleId)
+                VALUES (@EquipmentId, @EquipmentName, @Level, @Message, @TriggeredAt, @AlarmRuleId);
                 SELECT LAST_INSERT_ID();
                 """, record);
 
@@ -145,6 +146,11 @@ public class AlarmService : IAlarmService
 
     public async Task ResolveAlarmAsync(int alarmRecordId)
     {
+        // AS-3: reject non-positive IDs — UPDATE WHERE Id=0 silently does nothing
+        if (alarmRecordId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(alarmRecordId),
+                $"alarmRecordId must be positive, got {alarmRecordId}.");
+
         using var conn = _db.CreateConnection();
         await conn.ExecuteAsync(
             "UPDATE kanban_alarm_records SET ResolvedAt=@Now WHERE Id=@Id",
@@ -161,6 +167,25 @@ public class AlarmService : IAlarmService
 
     public async Task SaveRuleAsync(AlarmRule rule)
     {
+        // AS-2: validate all fields before touching the DB to prevent dead rules that are
+        // silently skipped on every evaluation cycle.
+        if (rule.EquipmentId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(rule),
+                $"AlarmRule.EquipmentId must be positive, got {rule.EquipmentId}.");
+
+        if (rule.DataSourceConfigId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(rule),
+                $"AlarmRule.DataSourceConfigId must be positive, got {rule.DataSourceConfigId}.");
+
+        if (!IsKnownCondition(rule.Condition))
+            throw new ArgumentException(
+                $"AlarmRule.Condition '{rule.Condition}' is not a supported operator. " +
+                $"Valid operators: {string.Join(", ", KnownConditions)}.", nameof(rule));
+
+        if (double.IsNaN(rule.Threshold) || double.IsInfinity(rule.Threshold))
+            throw new ArgumentException(
+                $"AlarmRule.Threshold must be a finite number, got {rule.Threshold}.", nameof(rule));
+
         using var conn = _db.CreateConnection();
         if (rule.Id == 0)
             await conn.ExecuteAsync(
@@ -176,6 +201,11 @@ public class AlarmService : IAlarmService
 
     public async Task DeleteRuleAsync(int ruleId)
     {
+        // AS-3: reject non-positive IDs
+        if (ruleId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(ruleId),
+                $"ruleId must be positive, got {ruleId}.");
+
         using var conn = _db.CreateConnection();
         await conn.ExecuteAsync("DELETE FROM kanban_alarm_rules WHERE Id=@Id", new { Id = ruleId });
     }
@@ -198,24 +228,17 @@ public class AlarmService : IAlarmService
             _    => false
         };
 
-    // A-2: check if an unresolved alarm already exists for this equipment + rule combination.
-    // Uses both EquipmentId and AlarmLevel so different-severity rules are tracked independently.
+    // AS-1 fix: check if an unresolved alarm for THIS SPECIFIC RULE already exists.
+    // The old EXISTS subquery only confirmed the rule+config existed, not that the active alarm
+    // belonged to that rule — causing an equipment-level lock instead of a per-rule dedup.
+    // Now uses the AlarmRuleId column added to kanban_alarm_records for exact matching.
     private async Task<bool> HasActiveAlarmForRuleAsync(int equipmentId, int ruleId)
     {
         using var conn = _db.CreateConnection();
-        // We store ruleId information implicitly via a stable prefix in the message format:
-        // "{equipmentName}: {configName} {condition} {threshold}" — prefix is invariant per rule.
-        // A cleaner long-term fix is to add a RuleId column to kanban_alarm_records.
         var count = await conn.ExecuteScalarAsync<int>(
             """
             SELECT COUNT(1) FROM kanban_alarm_records
-            WHERE EquipmentId=@EquipmentId AND ResolvedAt IS NULL
-            AND EXISTS (
-                SELECT 1 FROM kanban_alarm_rules r
-                JOIN kanban_datasource_configs c ON c.Id = r.DataSourceConfigId
-                WHERE r.Id = @RuleId
-                  AND r.EquipmentId = @EquipmentId
-            )
+            WHERE EquipmentId=@EquipmentId AND AlarmRuleId=@RuleId AND ResolvedAt IS NULL
             """,
             new { EquipmentId = equipmentId, RuleId = ruleId });
         return count > 0;

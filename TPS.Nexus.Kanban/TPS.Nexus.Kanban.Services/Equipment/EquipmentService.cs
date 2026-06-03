@@ -14,20 +14,23 @@ public class EquipmentService : IEquipmentService
 
     public async Task<IEnumerable<EquipmentModel>> GetAllEquipmentAsync()
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryAsync<EquipmentModel>("SELECT * FROM kanban_equipment ORDER BY Name");
     }
 
     public async Task<EquipmentModel?> GetEquipmentAsync(int id)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryFirstOrDefaultAsync<EquipmentModel>(
             "SELECT * FROM kanban_equipment WHERE Id = @Id", new { Id = id });
     }
 
     public async Task<EquipmentModel> CreateEquipmentAsync(EquipmentModel equipment)
     {
-        using var conn = _db.CreateConnection();
+        if (string.IsNullOrWhiteSpace(equipment.Name))
+            throw new ArgumentException("Equipment.Name must not be empty.", nameof(equipment));
+
+        await using var conn = _db.CreateConnection();
         equipment.Id = await conn.ExecuteScalarAsync<int>(
             """
             INSERT INTO kanban_equipment (Name, Tag, Description, IconType, IconValue)
@@ -39,7 +42,7 @@ public class EquipmentService : IEquipmentService
 
     public async Task UpdateEquipmentAsync(EquipmentModel equipment)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         await conn.ExecuteAsync(
             """
             UPDATE kanban_equipment
@@ -50,13 +53,17 @@ public class EquipmentService : IEquipmentService
 
     public async Task DeleteEquipmentAsync(int id)
     {
-        using var conn = _db.CreateConnection();
+        // ES-4: DELETE WHERE Id=0 silently affects no rows
+        if (id <= 0)
+            throw new ArgumentOutOfRangeException(nameof(id), $"id must be positive, got {id}.");
+
+        await using var conn = _db.CreateConnection();
         await conn.ExecuteAsync("DELETE FROM kanban_equipment WHERE Id=@Id", new { Id = id });
     }
 
     public async Task<IEnumerable<EquipmentWidget>> GetWidgetsByVersionAsync(int layoutVersionId)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         var widgets = (await conn.QueryAsync<EquipmentWidget>(
             "SELECT * FROM kanban_equipment_widgets WHERE LayoutVersionId=@LayoutVersionId",
             new { LayoutVersionId = layoutVersionId })).ToList();
@@ -69,7 +76,16 @@ public class EquipmentService : IEquipmentService
 
     public async Task<EquipmentWidget> SaveWidgetAsync(EquipmentWidget widget)
     {
-        using var conn = _db.CreateConnection();
+        // ES-3: non-positive FK IDs create orphaned records with no valid parent
+        if (widget.EquipmentId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(widget),
+                $"EquipmentWidget.EquipmentId must be positive, got {widget.EquipmentId}.");
+
+        if (widget.LayoutVersionId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(widget),
+                $"EquipmentWidget.LayoutVersionId must be positive, got {widget.LayoutVersionId}.");
+
+        await using var conn = _db.CreateConnection();
         if (widget.Id == 0)
         {
             widget.Id = await conn.ExecuteScalarAsync<int>(
@@ -93,13 +109,16 @@ public class EquipmentService : IEquipmentService
 
     public async Task DeleteWidgetAsync(int widgetId)
     {
-        using var conn = _db.CreateConnection();
+        if (widgetId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(widgetId), $"widgetId must be positive, got {widgetId}.");
+
+        await using var conn = _db.CreateConnection();
         await conn.ExecuteAsync("DELETE FROM kanban_equipment_widgets WHERE Id=@Id", new { Id = widgetId });
     }
 
     public async Task<IEnumerable<WidgetComponent>> GetComponentsByWidgetAsync(int widgetId)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryAsync<WidgetComponent>(
             "SELECT * FROM kanban_widget_components WHERE EquipmentWidgetId=@EquipmentWidgetId ORDER BY DisplayOrder",
             new { EquipmentWidgetId = widgetId });
@@ -107,7 +126,12 @@ public class EquipmentService : IEquipmentService
 
     public async Task SaveComponentAsync(WidgetComponent component)
     {
-        using var conn = _db.CreateConnection();
+        // ES-5: a zero or negative RefreshInterval causes PeriodicTimer to throw in the Blazor component
+        if (component.RefreshInterval <= 0)
+            throw new ArgumentOutOfRangeException(nameof(component),
+                $"WidgetComponent.RefreshInterval must be positive (seconds), got {component.RefreshInterval}.");
+
+        await using var conn = _db.CreateConnection();
         if (component.Id == 0)
             await conn.ExecuteAsync(
                 """
@@ -129,13 +153,16 @@ public class EquipmentService : IEquipmentService
 
     public async Task DeleteComponentAsync(int componentId)
     {
-        using var conn = _db.CreateConnection();
+        if (componentId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(componentId), $"componentId must be positive, got {componentId}.");
+
+        await using var conn = _db.CreateConnection();
         await conn.ExecuteAsync("DELETE FROM kanban_widget_components WHERE Id=@Id", new { Id = componentId });
     }
 
     public async Task<IEnumerable<EquipmentLinkConfig>> GetLinkConfigsAsync(int equipmentId)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryAsync<EquipmentLinkConfig>(
             "SELECT * FROM kanban_equipment_link_configs WHERE EquipmentId=@EquipmentId ORDER BY DisplayOrder",
             new { EquipmentId = equipmentId });
@@ -143,7 +170,7 @@ public class EquipmentService : IEquipmentService
 
     public async Task SaveLinkConfigAsync(EquipmentLinkConfig config)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         if (config.Id == 0)
             await conn.ExecuteAsync(
                 """
@@ -164,19 +191,22 @@ public class EquipmentService : IEquipmentService
 
     public async Task DeleteLinkConfigAsync(int id)
     {
-        using var conn = _db.CreateConnection();
+        if (id <= 0)
+            throw new ArgumentOutOfRangeException(nameof(id), $"id must be positive, got {id}.");
+
+        await using var conn = _db.CreateConnection();
         await conn.ExecuteAsync("DELETE FROM kanban_equipment_link_configs WHERE Id=@Id", new { Id = id });
     }
 
     public async Task<IEnumerable<DataSourceConfig>> GetAllDataSourceConfigsAsync()
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryAsync<DataSourceConfig>("SELECT * FROM kanban_datasource_configs ORDER BY Name");
     }
 
     public async Task<DataSourceConfig> SaveDataSourceConfigAsync(DataSourceConfig config)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         if (config.Id == 0)
             config.Id = await conn.ExecuteScalarAsync<int>(
                 """
@@ -197,7 +227,10 @@ public class EquipmentService : IEquipmentService
 
     public async Task DeleteDataSourceConfigAsync(int id)
     {
-        using var conn = _db.CreateConnection();
+        if (id <= 0)
+            throw new ArgumentOutOfRangeException(nameof(id), $"id must be positive, got {id}.");
+
+        await using var conn = _db.CreateConnection();
         await conn.ExecuteAsync("DELETE FROM kanban_datasource_configs WHERE Id=@Id", new { Id = id });
     }
 }

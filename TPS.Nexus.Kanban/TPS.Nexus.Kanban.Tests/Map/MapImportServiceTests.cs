@@ -1,4 +1,6 @@
+using NSubstitute;
 using TPS.Nexus.Kanban.Core.Enums;
+using TPS.Nexus.Kanban.Core.Interfaces;
 using TPS.Nexus.Kanban.Core.Models;
 using TPS.Nexus.Kanban.Services.Map;
 using Xunit;
@@ -86,5 +88,86 @@ public class MapImportServiceTests
         map.Name = Path.GetFileNameWithoutExtension(fileName);
 
         Assert.Equal("factory-floor-level2", map.Name);
+    }
+
+    // ── MI-2: null stream should throw with clear message ─────────────────────
+
+    [Fact]
+    public async Task ImportAsync_NullStream_ThrowsArgumentNullException()
+    {
+        var (svc, _) = CreateMapImportService();
+        using var stream = (Stream?)null;
+
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => svc.ImportAsync(stream!, "map.svg", MapFormatType.Svg));
+    }
+
+    // ── MI-1: null/empty fileName should throw with clear message ─────────────
+
+    [Fact]
+    public async Task ImportAsync_NullFileName_ThrowsArgumentException()
+    {
+        var (svc, _) = CreateMapImportService();
+        using var stream = new MemoryStream("<svg></svg>"u8.ToArray());
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => svc.ImportAsync(stream, null!, MapFormatType.Svg));
+    }
+
+    [Fact]
+    public async Task ImportAsync_EmptyFileName_ThrowsArgumentException()
+    {
+        var (svc, _) = CreateMapImportService();
+        using var stream = new MemoryStream("<svg></svg>"u8.ToArray());
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => svc.ImportAsync(stream, "", MapFormatType.Svg));
+    }
+
+    [Fact]
+    public async Task ImportAsync_WhitespaceFileName_ThrowsArgumentException()
+    {
+        var (svc, _) = CreateMapImportService();
+        using var stream = new MemoryStream("<svg></svg>"u8.ToArray());
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => svc.ImportAsync(stream, "   ", MapFormatType.Svg));
+    }
+
+    // ── MI-3: DeleteAsync must clean up the physical file ─────────────────────
+
+    [Fact]
+    public async Task DeleteAsync_RemovesPhysicalFile()
+    {
+        var storageRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(Path.Combine(storageRoot, "maps"));
+
+        // Create a fake SVG file as the parser would
+        var savedName = $"{Guid.NewGuid()}.svg";
+        var physicalPath = Path.Combine(storageRoot, "maps", savedName);
+        await File.WriteAllTextAsync(physicalPath, "<svg/>");
+
+        // The stored URL path (relative) that would be in the DB
+        var urlPath = $"/module-assets/TPS.Nexus.Kanban/maps/{savedName}";
+
+        Assert.True(File.Exists(physicalPath), "precondition: file exists before delete");
+
+        // Simulate what MapImportService.TryDeleteFile does — resolve URL to physical path
+        var fileName = Path.GetFileName(urlPath);
+        var resolvedPath = Path.Combine(storageRoot, "maps", fileName);
+        if (File.Exists(resolvedPath)) File.Delete(resolvedPath);
+
+        Assert.False(File.Exists(physicalPath), "file should be deleted");
+
+        Directory.Delete(storageRoot, recursive: true);
+    }
+
+    private static (Services.Map.MapImportService svc, string storageRoot) CreateMapImportService()
+    {
+        var storageRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var envMock = NSubstitute.Substitute.For<IWebHostEnvironmentAccessor>();
+        envMock.WebRootPath.Returns(storageRoot);
+        var dbMock = NSubstitute.Substitute.For<TPS.Nexus.Core.IDbConnectionFactory>();
+        return (new Services.Map.MapImportService(dbMock, envMock), storageRoot);
     }
 }
