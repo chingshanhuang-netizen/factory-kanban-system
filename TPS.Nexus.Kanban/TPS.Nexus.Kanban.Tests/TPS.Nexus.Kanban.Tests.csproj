@@ -13,5 +13,8 @@
   <ItemGroup>
     <ProjectReference Include="..\TPS.Nexus.Kanban.Services\TPS.Nexus.Kanban.Services.csproj" />
     <ProjectReference Include="..\TPS.Nexus.Kanban.Core\TPS.Nexus.Kanban.Core.csproj" />
+    <Reference Include="TPS.Nexus.Core">
+      <HintPath>..\libs\TPS.Nexus.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>
