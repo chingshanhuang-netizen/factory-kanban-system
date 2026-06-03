@@ -2,6 +2,8 @@ using Dapper;
 using TPS.Nexus.Core;
 using TPS.Nexus.Kanban.Core.Interfaces;
 using TPS.Nexus.Kanban.Core.Models;
+// The folder namespace TPS.Nexus.Kanban.Services.Equipment shadows the model class name "Equipment".
+// This alias is required to disambiguate; it is not removable without renaming the folder/namespace.
 using EquipmentModel = TPS.Nexus.Kanban.Core.Models.Equipment;
 
 namespace TPS.Nexus.Kanban.Services.Equipment;

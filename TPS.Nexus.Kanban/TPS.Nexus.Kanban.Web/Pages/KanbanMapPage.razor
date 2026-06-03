@@ -30,7 +30,7 @@
 
 <div style="display:flex;height:calc(100vh - 54px)">
     <div style="flex:1;min-width:0">
-        <FactoryMapCanvas MapId="@MapId" IsEditMode="@IsEditMode" CanvasHeight="600" />
+        <FactoryMapCanvas MapId="@MapId" IsEditMode="@IsEditMode" />
     </div>
 
     @if (ShowVersions)
@@ -76,7 +76,7 @@
             .WithUrl(KanbanRoutes.AlarmHubPath)
             .Build();
 
-        HubConn.On<int, string, string>("ReceiveAlarm", async (_, _, _) =>
+        HubConn.On<int, string, string>(KanbanRoutes.ReceiveAlarmEvent, async (_, _, _) =>
         {
             // W-14: an unhandled exception inside a SignalR receive callback silently kills
             // the connection; catch to keep the hub alive even if the DB is temporarily down.

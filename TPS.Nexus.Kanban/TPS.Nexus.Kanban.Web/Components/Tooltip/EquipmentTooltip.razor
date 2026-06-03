@@ -17,7 +17,7 @@
         @if (LatestData != null && LatestData.Fields.Any())
         {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:0.75em">
-                @foreach (var field in LatestData.Fields.Take(6))
+                @foreach (var field in LatestData.Fields.Take(ModuleOpts.Value.TooltipFieldsMaxCount))
                 {
                     <div style="color:#888">@field.Key</div>
                     <div style="color:#fff;text-align:right">@field.Value</div>
@@ -68,7 +68,8 @@
         var config = configs.FirstOrDefault(c => c.Id == trendComp.DataSourceConfigId);
         if (config == null) return;
 
-        var history = await DataSvc.FetchHistoryAsync(config, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow);
+        var history = await DataSvc.FetchHistoryAsync(config,
+            DateTime.UtcNow.AddHours(-ModuleOpts.Value.TooltipHistoryWindowHours), DateTime.UtcNow);
         int i = 0;
         foreach (var row in history.TakeLast(ModuleOpts.Value.TooltipHistoryMaxRows))
         {

@@ -54,7 +54,7 @@
                                 {
                                     <RadzenDataGrid Data="@rows" TItem="DataResult" Style="font-size:0.82em">
                                         <Columns>
-                                            @foreach (var key in rows.First().Fields.Keys.Take(5))
+                                            @foreach (var key in rows.First().Fields.Keys.Take(ModuleOpts.Value.TabDataColumnsMaxCount))
                                             {
                                                 <RadzenDataGridColumn TItem="DataResult" Title="@key"
                                                     Property="@($"Fields[\"{key}\"]")" />

@@ -3,6 +3,7 @@ using Dapper;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using TPS.Nexus.Core;
+using TPS.Nexus.Kanban.Core.Constants;
 using TPS.Nexus.Kanban.Core.Enums;
 using TPS.Nexus.Kanban.Core.Interfaces;
 using TPS.Nexus.Kanban.Core.Models;
@@ -29,7 +30,7 @@ public class AlarmService : IAlarmService
         _logger  = logger;
     }
 
-    public async Task EvaluateAsync(int equipmentId, string equipmentName, DataResult latestData)
+    public async Task EvaluateAsync(int equipmentId, string equipmentName)
     {
         // A-6: reject obviously invalid input early
         if (equipmentId <= 0)
@@ -125,7 +126,7 @@ public class AlarmService : IAlarmService
             // the record in DB while the caller receives no indication of the problem.
             try
             {
-                await _hub.Clients.All.SendAsync("ReceiveAlarm",
+                await _hub.Clients.All.SendAsync(KanbanRoutes.ReceiveAlarmEvent,
                     equipmentId, rule.AlarmLevel.ToString(), record.Message);
             }
             catch (Exception ex)

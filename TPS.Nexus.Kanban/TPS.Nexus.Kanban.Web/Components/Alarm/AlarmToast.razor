@@ -1,4 +1,5 @@
 @inject NotificationService NotificationSvc
+@inject IOptions<KanbanModuleOptions> ModuleOpts
 @implements IDisposable
 
 <RadzenNotification />
@@ -12,23 +13,26 @@
     {
         if (ReferenceEquals(_registeredHub, HubConnection)) return;
 
-        _registeredHub?.Remove("ReceiveAlarm");
+        _registeredHub?.Remove(KanbanRoutes.ReceiveAlarmEvent);
         _registeredHub = HubConnection;
 
-        HubConnection?.On<int, string, string>("ReceiveAlarm", (equipmentId, level, message) =>
+        HubConnection?.On<int, string, string>(KanbanRoutes.ReceiveAlarmEvent, (equipmentId, level, message) =>
         {
-            var severity = level switch
-            {
-                "Critical" => NotificationSeverity.Error,
-                "Warning"  => NotificationSeverity.Warning,
-                _ => NotificationSeverity.Info
-            };
-            InvokeAsync(() => NotificationSvc.Notify(severity, $"警報 [{level}]", message, duration: 5000));
+            var severity = Enum.TryParse<AlarmLevel>(level, out var parsedLevel)
+                ? parsedLevel switch
+                {
+                    AlarmLevel.Critical => NotificationSeverity.Error,
+                    AlarmLevel.Warning  => NotificationSeverity.Warning,
+                    _                   => NotificationSeverity.Info
+                }
+                : NotificationSeverity.Info;
+            InvokeAsync(() => NotificationSvc.Notify(severity, $"警報 [{level}]", message,
+                duration: ModuleOpts.Value.AlarmToastDurationMs));
         });
     }
 
     public void Dispose()
     {
-        _registeredHub?.Remove("ReceiveAlarm");
+        _registeredHub?.Remove(KanbanRoutes.ReceiveAlarmEvent);
     }
 }

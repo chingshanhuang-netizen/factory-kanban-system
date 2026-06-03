@@ -4,7 +4,7 @@ namespace TPS.Nexus.Kanban.Core.Interfaces;
 
 public interface IAlarmService
 {
-    Task EvaluateAsync(int equipmentId, string equipmentName, DataResult latestData);
+    Task EvaluateAsync(int equipmentId, string equipmentName);
     Task<IEnumerable<AlarmRecord>> GetActiveAlarmsAsync();
     Task ResolveAlarmAsync(int alarmRecordId);
     Task<IEnumerable<AlarmRule>> GetRulesAsync(int equipmentId);
