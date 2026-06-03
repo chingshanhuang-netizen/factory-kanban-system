@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "dgSpecHash": "vKVj2+hUQds=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Sean\\claude_code_project_demo\\TPS.Nexus.Kanban\\libs\\TPS.Nexus.Core.Stubs\\TPS.Nexus.Core.Stubs.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Sean\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\10.0.8\\microsoft.extensions.configuration.abstractions.10.0.8.nupkg.sha512",
+    "C:\\Users\\Sean\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.8\\microsoft.extensions.dependencyinjection.abstractions.10.0.8.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1510",
+      "level": "Warning",
+      "message": "將不會剪除 PackageReference Microsoft.Extensions.DependencyInjection.Abstractions。請考慮從相依性中移除此套件，因為它可能非必要。",
+      "projectPath": "C:\\Users\\Sean\\claude_code_project_demo\\TPS.Nexus.Kanban\\libs\\TPS.Nexus.Core.Stubs\\TPS.Nexus.Core.Stubs.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Sean\\claude_code_project_demo\\TPS.Nexus.Kanban\\libs\\TPS.Nexus.Core.Stubs\\TPS.Nexus.Core.Stubs.csproj",
+      "libraryId": "Microsoft.Extensions.DependencyInjection.Abstractions",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1510",
+      "level": "Warning",
+      "message": "將不會剪除 PackageReference Microsoft.Extensions.Configuration.Abstractions。請考慮從相依性中移除此套件，因為它可能非必要。",
+      "projectPath": "C:\\Users\\Sean\\claude_code_project_demo\\TPS.Nexus.Kanban\\libs\\TPS.Nexus.Core.Stubs\\TPS.Nexus.Core.Stubs.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Sean\\claude_code_project_demo\\TPS.Nexus.Kanban\\libs\\TPS.Nexus.Core.Stubs\\TPS.Nexus.Core.Stubs.csproj",
+      "libraryId": "Microsoft.Extensions.Configuration.Abstractions",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
+}
