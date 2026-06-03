@@ -1,0 +1,27 @@
+<span class="kanban-status-dot @CssClass"></span>
+<span style="color:@Color; font-size:0.6em">@Label</span>
+
+@code {
+    [Parameter] public AlarmLevel? ActiveAlarm { get; set; }
+    [Parameter] public bool IsRunning { get; set; } = true;
+
+    private string CssClass => ActiveAlarm switch
+    {
+        AlarmLevel.Critical or AlarmLevel.Warning => "kanban-status-alarm",
+        _ => IsRunning ? "kanban-status-running" : "kanban-status-stopped"
+    };
+
+    private string Color => ActiveAlarm switch
+    {
+        AlarmLevel.Critical => "#f44336",
+        AlarmLevel.Warning  => "#ff9800",
+        _ => IsRunning ? "#4caf50" : "#607d8b"
+    };
+
+    private string Label => ActiveAlarm switch
+    {
+        AlarmLevel.Critical => "⚠ 警報",
+        AlarmLevel.Warning  => "⚠ 警告",
+        _ => IsRunning ? "運行" : "停機"
+    };
+}

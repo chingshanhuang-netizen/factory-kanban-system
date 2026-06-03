@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Radzen.Blazor" Version="5.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.*" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TPS.Nexus.Kanban.Services\TPS.Nexus.Kanban.Services.csproj" />
+    <ProjectReference Include="..\TPS.Nexus.Kanban.Core\TPS.Nexus.Kanban.Core.csproj" />
+    <Reference Include="TPS.Nexus.Core">
+      <HintPath>..\libs\TPS.Nexus.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

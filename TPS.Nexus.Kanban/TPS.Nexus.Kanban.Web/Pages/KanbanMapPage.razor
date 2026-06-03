@@ -1,0 +1,121 @@
+@page "/kanban/{MapId:int}"
+@inject IMapImportService MapImportSvc
+@inject ILayoutService LayoutSvc
+@inject IAlarmService AlarmSvc
+@inject IFunctionPermissionService PermSvc
+@inject NotificationService NotifySvc
+@implements IAsyncDisposable
+
+<PageTitle>工廠看板 — @(CurrentMap?.Name ?? "載入中")</PageTitle>
+
+@if (!CanView)
+{
+    <div style="padding:40px;text-align:center;color:#f44336">無查看權限（需要 KANBAN_VIEW）</div>
+    return;
+}
+
+@if (CurrentMap == null)
+{
+    <div style="padding:40px;text-align:center;color:#888">地圖載入中...</div>
+    return;
+}
+
+<MapEditorToolbar
+    MapName="@CurrentMap.Name"
+    PublishedVersion="@PublishedVersion"
+    @bind-IsEditMode="IsEditMode"
+    OnSaveDraft="@HandleSaveDraft"
+    OnPublish="@HandlePublish"
+    OnShowVersions="@(() => ShowVersions = !ShowVersions)" />
+
+<div style="display:flex;height:calc(100vh - 54px)">
+    <div style="flex:1;min-width:0">
+        <FactoryMapCanvas MapId="@MapId" IsEditMode="@IsEditMode" CanvasHeight="600" />
+    </div>
+
+    @if (ShowVersions)
+    {
+        <div style="width:380px;border-left:1px solid #1a3a5c;padding:12px;overflow-y:auto">
+            <LayoutVersionPanel MapId="@MapId" OnRolledBack="@HandleRollback" />
+        </div>
+    }
+
+    @if (ActiveAlarms.Any())
+    {
+        <div style="width:320px;border-left:1px solid #7f0000;padding:12px;overflow-y:auto">
+            <AlarmPanel Alarms="@ActiveAlarms" OnResolved="@ReloadAlarms" />
+        </div>
+    }
+</div>
+
+<AlarmToast HubConnection="@HubConn" />
+
+@code {
+    [Parameter] public int MapId { get; set; }
+
+    private FactoryMap? CurrentMap;
+    private LayoutVersion? PublishedVersion;
+    private List<AlarmRecord> ActiveAlarms = new();
+    private bool CanView;
+    private bool IsEditMode;
+    private bool ShowVersions;
+    private int? DraftId;
+    private HubConnection? HubConn;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CanView = await PermSvc.HasPermissionAsync("KANBAN_VIEW");
+        if (!CanView) return;
+
+        var maps = await MapImportSvc.GetAllAsync();
+        CurrentMap = maps.FirstOrDefault(m => m.Id == MapId);
+        PublishedVersion = await LayoutSvc.GetPublishedVersionAsync(MapId);
+        await ReloadAlarms();
+
+        HubConn = new HubConnectionBuilder()
+            .WithUrl("/hubs/kanban-alarm")
+            .Build();
+
+        HubConn.On<int, string, string>("ReceiveAlarm", async (_, _, _) =>
+        {
+            await ReloadAlarms();
+            await InvokeAsync(StateHasChanged);
+        });
+
+        await HubConn.StartAsync();
+    }
+
+    private async Task HandleSaveDraft()
+    {
+        if (CurrentMap == null) return;
+        var draft = await LayoutSvc.SaveDraftAsync(MapId, "{}", "CurrentUser");
+        DraftId = draft.Id;
+        NotifySvc.Notify(NotificationSeverity.Info, "草稿已儲存", $"v{draft.VersionNo}");
+    }
+
+    private async Task HandlePublish()
+    {
+        if (DraftId == null) { NotifySvc.Notify(NotificationSeverity.Warning, "請先存草稿"); return; }
+        var published = await LayoutSvc.PublishAsync(DraftId.Value);
+        PublishedVersion = published;
+        DraftId = null;
+        NotifySvc.Notify(NotificationSeverity.Success, "已發布", $"v{published.VersionNo}");
+    }
+
+    private async Task HandleRollback()
+    {
+        PublishedVersion = await LayoutSvc.GetPublishedVersionAsync(MapId);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ReloadAlarms()
+    {
+        ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (HubConn != null)
+            await HubConn.DisposeAsync();
+    }
+}

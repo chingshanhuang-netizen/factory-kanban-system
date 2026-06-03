@@ -1,0 +1,42 @@
+@if (Map != null)
+{
+    @switch (Map.FormatType)
+    {
+        case MapFormatType.Png:
+        case MapFormatType.Jpg:
+            <img src="@Map.FilePath" alt="@Map.Name" class="kanban-map-layer"
+                 style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.65;pointer-events:none;" />
+            break;
+
+        case MapFormatType.Svg:
+        case MapFormatType.Dxf:
+            @if (!string.IsNullOrEmpty(SvgContent))
+            {
+                <div style="position:absolute;inset:0;opacity:0.65;pointer-events:none;"
+                     @((MarkupString)SvgContent)></div>
+            }
+            break;
+
+        case MapFormatType.JsonCoord:
+        case MapFormatType.XmlCoord:
+            @* Coord-based maps have no background image — equipment positions come from data *@
+            break;
+    }
+}
+
+@code {
+    [Parameter] public FactoryMap? Map { get; set; }
+
+    private string? SvgContent;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Map?.FormatType is MapFormatType.Svg or MapFormatType.Dxf
+            && !string.IsNullOrEmpty(Map.FilePath))
+        {
+            var localPath = Map.FilePath.Replace("/module-assets/TPS.Nexus.Kanban/", string.Empty);
+            if (File.Exists(localPath))
+                SvgContent = await File.ReadAllTextAsync(localPath);
+        }
+    }
+}

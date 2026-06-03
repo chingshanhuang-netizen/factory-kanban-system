@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="TPS.Nexus.Kanban.Core/TPS.Nexus.Kanban.Core.csproj" />
+  <Project Path="TPS.Nexus.Kanban.Services/TPS.Nexus.Kanban.Services.csproj" />
+  <Project Path="TPS.Nexus.Kanban.Tests/TPS.Nexus.Kanban.Tests.csproj" />
+  <Project Path="TPS.Nexus.Kanban.Web/TPS.Nexus.Kanban.Web.csproj" />
+</Solution>

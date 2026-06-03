@@ -1,0 +1,73 @@
+@inject IFunctionPermissionService PermSvc
+
+<RadzenToolbar Style="background:#0d1b2a;border-bottom:1px solid #1a3a5c;padding:4px 12px">
+    <RadzenToolbarItem>
+        <span style="color:#aaa;font-size:0.85em">
+            🗺️ <strong style="color:#fff">@MapName</strong>
+            @if (PublishedVersion != null)
+            {
+                <span style="color:#888"> · v@(PublishedVersion.VersionNo) 已發布</span>
+            }
+        </span>
+    </RadzenToolbarItem>
+
+    @if (CanEdit)
+    {
+        <RadzenToolbarItem>
+            <RadzenButton Text="@(IsEditMode ? "✅ 完成編輯" : "✏️ 編輯")"
+                          ButtonStyle="@(IsEditMode ? ButtonStyle.Success : ButtonStyle.Secondary)"
+                          Size="ButtonSize.Small"
+                          Click="@ToggleEditMode" />
+        </RadzenToolbarItem>
+    }
+
+    @if (IsEditMode)
+    {
+        <RadzenToolbarItem>
+            <RadzenButton Text="💾 存草稿" ButtonStyle="ButtonStyle.Warning"
+                          Size="ButtonSize.Small" Click="@SaveDraft" />
+        </RadzenToolbarItem>
+
+        @if (CanPublish)
+        {
+            <RadzenToolbarItem>
+                <RadzenButton Text="🚀 發布" ButtonStyle="ButtonStyle.Primary"
+                              Size="ButtonSize.Small" Click="@Publish" />
+            </RadzenToolbarItem>
+        }
+    }
+
+    <RadzenToolbarItem>
+        <RadzenButton Text="📋 版本" ButtonStyle="ButtonStyle.Light"
+                      Size="ButtonSize.Small" Click="@ShowVersionPanel" />
+    </RadzenToolbarItem>
+</RadzenToolbar>
+
+@code {
+    [Parameter] public string MapName { get; set; } = string.Empty;
+    [Parameter] public LayoutVersion? PublishedVersion { get; set; }
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public EventCallback<bool> IsEditModeChanged { get; set; }
+    [Parameter] public EventCallback OnSaveDraft { get; set; }
+    [Parameter] public EventCallback OnPublish { get; set; }
+    [Parameter] public EventCallback OnShowVersions { get; set; }
+
+    private bool CanEdit;
+    private bool CanPublish;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CanEdit = await PermSvc.HasPermissionAsync("KANBAN_EDIT");
+        CanPublish = await PermSvc.HasPermissionAsync("KANBAN_PUBLISH");
+    }
+
+    private async Task ToggleEditMode()
+    {
+        IsEditMode = !IsEditMode;
+        await IsEditModeChanged.InvokeAsync(IsEditMode);
+    }
+
+    private async Task SaveDraft() => await OnSaveDraft.InvokeAsync();
+    private async Task Publish() => await OnPublish.InvokeAsync();
+    private async Task ShowVersionPanel() => await OnShowVersions.InvokeAsync();
+}

@@ -1,0 +1,42 @@
+<div id="widget-@Widget.Id"
+     class="kanban-widget @AlarmClass"
+     data-equipment-id="@Widget.EquipmentId"
+     style="left:@(Widget.PositionX)px; top:@(Widget.PositionY)px; width:@(Widget.Width)px;"
+     @onclick="HandleClick"
+     @onmouseenter="HandleMouseEnter"
+     @onmouseleave="HandleMouseLeave">
+
+    <div class="kanban-widget-icon">
+        <EquipmentIconRenderer Equipment="@EquipmentData" />
+    </div>
+    <div class="kanban-widget-name">@EquipmentData?.Name</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:3px">
+        <StatusIndicator ActiveAlarm="@ActiveAlarm" IsRunning="@IsRunning" />
+    </div>
+
+    @if (ActiveAlarm.HasValue)
+    {
+        <AlarmBadge />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EquipmentWidget Widget { get; set; } = default!;
+    [Parameter] public Equipment? EquipmentData { get; set; }
+    [Parameter] public AlarmLevel? ActiveAlarm { get; set; }
+    [Parameter] public bool IsRunning { get; set; } = true;
+    [Parameter] public EventCallback<EquipmentWidget> OnClick { get; set; }
+    [Parameter] public EventCallback<EquipmentWidget> OnHover { get; set; }
+    [Parameter] public EventCallback OnHoverEnd { get; set; }
+
+    private string AlarmClass => ActiveAlarm switch
+    {
+        AlarmLevel.Critical => "alarm-critical",
+        AlarmLevel.Warning  => "alarm-warning",
+        _ => string.Empty
+    };
+
+    private async Task HandleClick() => await OnClick.InvokeAsync(Widget);
+    private async Task HandleMouseEnter() => await OnHover.InvokeAsync(Widget);
+    private async Task HandleMouseLeave() => await OnHoverEnd.InvokeAsync();
+}

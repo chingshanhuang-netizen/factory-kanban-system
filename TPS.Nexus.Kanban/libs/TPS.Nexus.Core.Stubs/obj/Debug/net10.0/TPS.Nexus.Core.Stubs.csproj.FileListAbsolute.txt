@@ -1,0 +1,11 @@
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\obj\Debug\net10.0\TPS.Nexus.Core.Stubs.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\obj\Debug\net10.0\TPS.Nexus.Core.Stubs.AssemblyInfoInputs.cache
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\obj\Debug\net10.0\TPS.Nexus.Core.Stubs.AssemblyInfo.cs
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\obj\Debug\net10.0\TPS.Nexus.Core.Stubs.csproj.CoreCompileInputs.cache
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\bin\Debug\net10.0\TPS.Nexus.Core.deps.json
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\bin\Debug\net10.0\TPS.Nexus.Core.dll
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\bin\Debug\net10.0\TPS.Nexus.Core.pdb
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\obj\Debug\net10.0\TPS.Nexus.Core.dll
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\obj\Debug\net10.0\refint\TPS.Nexus.Core.dll
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\obj\Debug\net10.0\TPS.Nexus.Core.pdb
+C:\Users\Sean\claude_code_project_demo\TPS.Nexus.Kanban\libs\TPS.Nexus.Core.Stubs\obj\Debug\net10.0\ref\TPS.Nexus.Core.dll

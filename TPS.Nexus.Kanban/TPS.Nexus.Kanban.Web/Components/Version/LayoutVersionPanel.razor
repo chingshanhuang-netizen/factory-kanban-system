@@ -1,0 +1,59 @@
+@inject ILayoutService LayoutSvc
+@inject IFunctionPermissionService PermSvc
+
+<RadzenDataGrid Data="@Versions" TItem="LayoutVersion" Style="font-size:0.85em">
+    <Columns>
+        <RadzenDataGridColumn TItem="LayoutVersion" Property="VersionNo" Title="版本" Width="60px" />
+        <RadzenDataGridColumn TItem="LayoutVersion" Property="Status" Title="狀態" Width="80px">
+            <Template Context="v">
+                <span style="color:@StatusColor(v.Status)">@v.Status</span>
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LayoutVersion" Property="CreatedBy" Title="建立者" />
+        <RadzenDataGridColumn TItem="LayoutVersion" Property="PublishedAt" Title="發布時間" FormatString="{0:yyyy-MM-dd HH:mm}" />
+        <RadzenDataGridColumn TItem="LayoutVersion" Title="操作" Width="120px">
+            <Template Context="v">
+                @if (v.Status == LayoutStatus.Archived && CanPublish)
+                {
+                    <RadzenButton Text="回溯" Size="ButtonSize.ExtraSmall"
+                                  ButtonStyle="ButtonStyle.Warning"
+                                  Click="@(() => Rollback(v.Id))" />
+                }
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    [Parameter, EditorRequired] public int MapId { get; set; }
+    [Parameter] public EventCallback OnRolledBack { get; set; }
+
+    private List<LayoutVersion> Versions = new();
+    private bool CanPublish;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CanPublish = await PermSvc.HasPermissionAsync("KANBAN_PUBLISH");
+        await LoadVersions();
+    }
+
+    private async Task LoadVersions()
+    {
+        Versions = (await LayoutSvc.GetVersionHistoryAsync(MapId)).ToList();
+    }
+
+    private async Task Rollback(int versionId)
+    {
+        await LayoutSvc.RollbackAsync(versionId);
+        await LoadVersions();
+        await OnRolledBack.InvokeAsync();
+    }
+
+    private static string StatusColor(LayoutStatus s) => s switch
+    {
+        LayoutStatus.Published => "#4caf50",
+        LayoutStatus.Draft     => "#2196f3",
+        LayoutStatus.Archived  => "#607d8b",
+        _ => "#fff"
+    };
+}

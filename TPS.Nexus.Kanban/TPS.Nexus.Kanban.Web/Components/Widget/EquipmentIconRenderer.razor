@@ -1,0 +1,17 @@
+@if (Equipment?.IconType == IconType.CustomImage && !string.IsNullOrEmpty(Equipment.IconValue))
+{
+    <img src="@Equipment.IconValue" alt="@Equipment.Name"
+         style="width:1.6em; height:1.6em; object-fit:contain;" />
+}
+else if (!string.IsNullOrEmpty(Equipment?.IconValue))
+{
+    <i class="@Equipment.IconValue" style="font-size:1.6em;"></i>
+}
+else
+{
+    <span style="font-size:1.6em;">⚙️</span>
+}
+
+@code {
+    [Parameter] public Equipment? Equipment { get; set; }
+}

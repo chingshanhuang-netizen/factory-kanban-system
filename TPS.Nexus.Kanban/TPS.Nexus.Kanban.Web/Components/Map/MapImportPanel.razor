@@ -1,0 +1,72 @@
+@inject IMapImportService MapImportSvc
+
+<RadzenCard Style="padding:16px">
+    <RadzenText TextStyle="TextStyle.H6">匯入廠區地圖</RadzenText>
+
+    <RadzenFormField Text="地圖格式" Style="width:100%;margin-top:8px">
+        <RadzenDropDown @bind-Value="SelectedFormat" Data="@FormatOptions"
+                        TextProperty="Label" ValueProperty="Value" />
+    </RadzenFormField>
+
+    <div style="margin-top:12px">
+        <InputFile OnChange="@OnFileSelected"
+                   accept=".png,.jpg,.jpeg,.svg,.dxf,.json,.xml"
+                   style="color:#aaa;width:100%" />
+    </div>
+
+    <RadzenButton Text="上傳並匯入" ButtonStyle="ButtonStyle.Primary"
+                  Style="margin-top:12px;width:100%"
+                  Disabled="@(_selectedFile == null)"
+                  Click="@DoImport" />
+
+    @if (!string.IsNullOrEmpty(StatusMessage))
+    {
+        <div style="margin-top:8px;color:@(_isError ? "#f44336" : "#4caf50");font-size:0.85em">
+            @StatusMessage
+        </div>
+    }
+</RadzenCard>
+
+@code {
+    [Parameter] public EventCallback<FactoryMap> OnImported { get; set; }
+
+    private IBrowserFile? _selectedFile;
+    private MapFormatType SelectedFormat = MapFormatType.Png;
+    private string StatusMessage = string.Empty;
+    private bool _isError;
+
+    private static readonly List<(string Label, MapFormatType Value)> FormatOptions = new()
+    {
+        ("PNG 圖片",       MapFormatType.Png),
+        ("JPG 圖片",       MapFormatType.Jpg),
+        ("SVG 向量圖",     MapFormatType.Svg),
+        ("DXF 工程圖",     MapFormatType.Dxf),
+        ("JSON 座標定義",  MapFormatType.JsonCoord),
+        ("XML 座標定義",   MapFormatType.XmlCoord),
+    };
+
+    private void OnFileSelected(InputFileChangeEventArgs args)
+    {
+        _selectedFile = args.File;
+    }
+
+    private async Task DoImport()
+    {
+        if (_selectedFile == null) return;
+        _isError = false;
+        StatusMessage = "匯入中...";
+
+        try
+        {
+            await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            var map = await MapImportSvc.ImportAsync(stream, _selectedFile.Name, SelectedFormat);
+            StatusMessage = $"✅ 已匯入：{map.Name}";
+            await OnImported.InvokeAsync(map);
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            StatusMessage = $"❌ 匯入失敗：{ex.Message}";
+        }
+    }
+}
