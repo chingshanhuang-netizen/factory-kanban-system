@@ -1,0 +1,70 @@
+@inject IEquipmentService EquipmentSvc
+
+@if (Widget != null)
+{
+    <RadzenAccordion>
+        <Items>
+            <RadzenAccordionItem Text="元件設定" Icon="settings">
+                @foreach (var comp in Widget.Components.OrderBy(c => c.DisplayOrder))
+                {
+                    <div style="border:1px solid #1a3a5c;border-radius:4px;padding:8px;margin-bottom:8px">
+                        <RadzenText TextStyle="TextStyle.Subtitle2">@comp.ComponentType.ToString()</RadzenText>
+                        <RadzenFormField Text="標籤" Style="width:100%;margin-top:4px">
+                            <RadzenTextBox @bind-Value="comp.Label" />
+                        </RadzenFormField>
+                        <RadzenFormField Text="單位" Style="width:100%;margin-top:4px">
+                            <RadzenTextBox @bind-Value="comp.Unit" />
+                        </RadzenFormField>
+                        <RadzenFormField Text="刷新間隔(秒)" Style="width:100%;margin-top:4px">
+                            <RadzenNumeric TValue="int" @bind-Value="comp.RefreshInterval" Min="5" Max="3600" />
+                        </RadzenFormField>
+                        <RadzenFormField Text="資料來源" Style="width:100%;margin-top:4px">
+                            <RadzenDropDown @bind-Value="comp.DataSourceConfigId"
+                                            Data="@DataSources"
+                                            TextProperty="Name"
+                                            ValueProperty="Id"
+                                            AllowClear="true" />
+                        </RadzenFormField>
+                        <RadzenButton Text="儲存" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary"
+                                      Style="margin-top:6px" Click="@(() => SaveComponent(comp))" />
+                    </div>
+                }
+                <RadzenButton Text="+ 新增元件" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                              Click="@AddComponent" />
+            </RadzenAccordionItem>
+        </Items>
+    </RadzenAccordion>
+}
+
+@code {
+    [Parameter] public EquipmentWidget? Widget { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private List<DataSourceConfig> DataSources = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        DataSources = (await EquipmentSvc.GetAllDataSourceConfigsAsync()).ToList();
+    }
+
+    private async Task SaveComponent(WidgetComponent comp)
+    {
+        await EquipmentSvc.SaveComponentAsync(comp);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task AddComponent()
+    {
+        if (Widget == null) return;
+        var newComp = new WidgetComponent
+        {
+            EquipmentWidgetId = Widget.Id,
+            ComponentType = WidgetComponentType.ValueGauge,
+            RefreshInterval = 30,
+            DisplayOrder = Widget.Components.Count
+        };
+        await EquipmentSvc.SaveComponentAsync(newComp);
+        Widget.Components.Add(newComp);
+        await OnChanged.InvokeAsync();
+    }
+}

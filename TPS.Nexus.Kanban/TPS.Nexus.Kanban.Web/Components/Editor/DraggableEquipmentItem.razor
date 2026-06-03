@@ -1,0 +1,17 @@
+<div class="kanban-widget"
+     data-equipment-id="@Equipment.Id"
+     style="position:relative;cursor:grab;margin-bottom:6px;left:0;top:0;"
+     title="拖曳至地圖">
+    <div class="kanban-widget-icon">
+        <EquipmentIconRenderer Equipment="@Equipment" />
+    </div>
+    <div class="kanban-widget-name">@Equipment.Name</div>
+    @if (!string.IsNullOrEmpty(Equipment.Tag))
+    {
+        <div style="color:#888;font-size:0.6em">@Equipment.Tag</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Equipment Equipment { get; set; } = default!;
+}
