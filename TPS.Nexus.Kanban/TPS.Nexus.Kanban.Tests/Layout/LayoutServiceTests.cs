@@ -1,11 +1,46 @@
+using NSubstitute;
+using TPS.Nexus.Core;
 using TPS.Nexus.Kanban.Core.Enums;
 using TPS.Nexus.Kanban.Core.Models;
+using TPS.Nexus.Kanban.Services.Layout;
 using Xunit;
 
 namespace TPS.Nexus.Kanban.Tests.Layout;
 
 public class LayoutServiceTests
 {
+    private static LayoutService CreateService()
+    {
+        var db = Substitute.For<IDbConnectionFactory>();
+        return new LayoutService(db);
+    }
+
+    // ── LA-3: GetVersionHistoryAsync — mapId guard ────────────────────────────
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(int.MinValue)]
+    public async Task GetVersionHistoryAsync_NonPositiveMapId_ThrowsArgumentOutOfRange(int mapId)
+    {
+        var svc = CreateService();
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => svc.GetVersionHistoryAsync(mapId));
+    }
+
+    // ── LA-4: GetPublishedVersionAsync — mapId guard ──────────────────────────
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(int.MinValue)]
+    public async Task GetPublishedVersionAsync_NonPositiveMapId_ThrowsArgumentOutOfRange(int mapId)
+    {
+        var svc = CreateService();
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => svc.GetPublishedVersionAsync(mapId));
+    }
+
     // ── existing model-behaviour tests ───────────────────────────────────────
 
     [Fact]
