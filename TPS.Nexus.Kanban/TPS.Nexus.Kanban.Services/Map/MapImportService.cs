@@ -47,7 +47,7 @@ public class MapImportService : IMapImportService
 
         map.Name = Path.GetFileNameWithoutExtension(fileName);
 
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         map.Id = await conn.ExecuteScalarAsync<int>(
             """
             INSERT INTO kanban_factory_maps (Name, FormatType, FilePath, ThumbnailPath, CreatedAt)
@@ -60,13 +60,13 @@ public class MapImportService : IMapImportService
 
     public async Task<IEnumerable<FactoryMap>> GetAllAsync()
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryAsync<FactoryMap>("SELECT * FROM kanban_factory_maps ORDER BY CreatedAt DESC");
     }
 
     public async Task DeleteAsync(int mapId)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
 
         // MI-3: read FilePath/ThumbnailPath before deleting the DB record so we can clean up
         // the physical files. Without this, orphaned files accumulate on disk indefinitely.

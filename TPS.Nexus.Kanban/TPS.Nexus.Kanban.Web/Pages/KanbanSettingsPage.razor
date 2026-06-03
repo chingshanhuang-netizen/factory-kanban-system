@@ -175,8 +175,15 @@
 
     private async Task DeleteEquipment(int id)
     {
-        await EquipmentSvc.DeleteEquipmentAsync(id);
-        AllEquipment.RemoveAll(e => e.Id == id);
+        try
+        {
+            await EquipmentSvc.DeleteEquipmentAsync(id);
+            AllEquipment.RemoveAll(e => e.Id == id);
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "刪除設備失敗", ex.Message);
+        }
     }
 
     private void AddDataSource()
@@ -186,8 +193,15 @@
 
     private async Task OnDataSourceUpdate(DataSourceConfig ds)
     {
-        await EquipmentSvc.SaveDataSourceConfigAsync(ds);
-        await LoadAll();
+        try
+        {
+            await EquipmentSvc.SaveDataSourceConfigAsync(ds);
+            await LoadAll();
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "儲存資料來源失敗", ex.Message);
+        }
     }
 
     private void OnIconFileSelected(InputFileChangeEventArgs args)
@@ -198,19 +212,37 @@
     private async Task DoIconUpload()
     {
         if (_iconFile == null) return;
-        await using var stream = _iconFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
-        IconUploadResult = await IconSvc.UploadAsync(stream, _iconFile.Name);
-        NotifySvc.Notify(NotificationSeverity.Success, "圖示已上傳", IconUploadResult);
+        try
+        {
+            await using var stream = _iconFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            IconUploadResult = await IconSvc.UploadAsync(stream, _iconFile.Name);
+            NotifySvc.Notify(NotificationSeverity.Success, "圖示已上傳", IconUploadResult);
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "上傳圖示失敗", ex.Message);
+        }
     }
 
     private async Task OnMapImported(FactoryMap map)
     {
-        AllMaps = (await MapImportSvc.GetAllAsync()).ToList();
+        try
+        {
+            AllMaps = (await MapImportSvc.GetAllAsync()).ToList();
+        }
+        catch { }
     }
 
     private async Task DeleteMap(int id)
     {
-        await MapImportSvc.DeleteAsync(id);
-        AllMaps.RemoveAll(m => m.Id == id);
+        try
+        {
+            await MapImportSvc.DeleteAsync(id);
+            AllMaps.RemoveAll(m => m.Id == id);
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "刪除地圖失敗", ex.Message);
+        }
     }
 }

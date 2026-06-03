@@ -1,4 +1,5 @@
 @inject IAlarmService AlarmSvc
+@inject NotificationService NotifySvc
 
 <div style="background:#0d1b2a;border:1px solid #7f0000;border-radius:6px;padding:12px;max-height:300px;overflow-y:auto">
     <div style="color:#f44336;font-weight:bold;margin-bottom:8px">⚠ 活躍警報 (@Alarms.Count)</div>
@@ -27,8 +28,15 @@
 
     private async Task Resolve(int id)
     {
-        await AlarmSvc.ResolveAlarmAsync(id);
-        await OnResolved.InvokeAsync();
+        try
+        {
+            await AlarmSvc.ResolveAlarmAsync(id);
+            await OnResolved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "解除警報失敗", ex.Message);
+        }
     }
 
     private static string LevelColor(AlarmLevel l) => l switch
