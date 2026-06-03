@@ -11,7 +11,8 @@ public class CsvDataAdapter
     {
         var result = new DataResult();
         var path = config.FilePath
-            ?? throw new InvalidOperationException("FilePath is required for CSV source.");
+            ?? throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): FilePath is required for CSV source.");
 
         var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
@@ -22,8 +23,11 @@ public class CsvDataAdapter
         using var reader = new StreamReader(path);
         using var csv = new CsvReader(reader, csvConfig);
 
-        csv.Read();
+        // DS-6: read header only if the file has at least one row; an empty file must not
+        // throw CsvHelperException from ReadHeader() being called before Read() returns true.
+        if (!csv.Read()) return Task.FromResult(result);
         csv.ReadHeader();
+
         if (csv.Read())
         {
             foreach (var header in csv.HeaderRecord ?? Array.Empty<string>())
@@ -33,11 +37,17 @@ public class CsvDataAdapter
         return Task.FromResult(result);
     }
 
+    /// <remarks>
+    /// DS-3: CSV files are static snapshots without per-row timestamps. This method returns
+    /// all rows regardless of <paramref name="from"/> and <paramref name="to"/>. If time-range
+    /// filtering is required, add a timestamp column to the CSV and filter by it in the query.
+    /// </remarks>
     public Task<IEnumerable<DataResult>> FetchHistoryAsync(DataSourceConfig config, DateTime from, DateTime to)
     {
         var results = new List<DataResult>();
         var path = config.FilePath
-            ?? throw new InvalidOperationException("FilePath is required for CSV source.");
+            ?? throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): FilePath is required for CSV source.");
 
         var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
@@ -48,8 +58,10 @@ public class CsvDataAdapter
         using var reader = new StreamReader(path);
         using var csv = new CsvReader(reader, csvConfig);
 
-        csv.Read();
+        // DS-6: guard empty file before ReadHeader()
+        if (!csv.Read()) return Task.FromResult<IEnumerable<DataResult>>(results);
         csv.ReadHeader();
+
         while (csv.Read())
         {
             var row = new DataResult();

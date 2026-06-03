@@ -20,22 +20,38 @@ public class DataSourceService : IDataSourceService
         _xml = new XmlDataAdapter();
     }
 
-    public Task<DataResult> FetchAsync(DataSourceConfig config) => config.SourceType switch
+    public Task<DataResult> FetchAsync(DataSourceConfig config)
     {
-        DataSourceType.Sql  => _sql.FetchAsync(config),
-        DataSourceType.Csv  => _csv.FetchAsync(config),
-        DataSourceType.Json => _json.FetchAsync(config),
-        DataSourceType.Xml  => _xml.FetchAsync(config),
-        _ => throw new NotSupportedException($"DataSourceType {config.SourceType} is not supported.")
-    };
+        // DS-1: guard null config before the switch accesses config.SourceType
+        ArgumentNullException.ThrowIfNull(config);
+
+        return config.SourceType switch
+        {
+            DataSourceType.Sql  => _sql.FetchAsync(config),
+            DataSourceType.Csv  => _csv.FetchAsync(config),
+            DataSourceType.Json => _json.FetchAsync(config),
+            DataSourceType.Xml  => _xml.FetchAsync(config),
+            _ => throw new NotSupportedException($"DataSourceType '{config.SourceType}' is not supported.")
+        };
+    }
 
     public Task<IEnumerable<DataResult>> FetchHistoryAsync(DataSourceConfig config, DateTime from, DateTime to)
-        => config.SourceType switch
+    {
+        // DS-1: guard null config
+        ArgumentNullException.ThrowIfNull(config);
+
+        // DS-2: reject inverted time ranges — callers passing from > to is always a bug
+        if (from > to)
+            throw new ArgumentException(
+                $"'from' ({from:O}) must not be later than 'to' ({to:O}).", nameof(from));
+
+        return config.SourceType switch
         {
             DataSourceType.Sql  => _sql.FetchHistoryAsync(config, from, to),
             DataSourceType.Csv  => _csv.FetchHistoryAsync(config, from, to),
             DataSourceType.Json => _json.FetchHistoryAsync(config, from, to),
             DataSourceType.Xml  => _xml.FetchHistoryAsync(config, from, to),
-            _ => throw new NotSupportedException($"DataSourceType {config.SourceType} is not supported.")
+            _ => throw new NotSupportedException($"DataSourceType '{config.SourceType}' is not supported.")
         };
+    }
 }

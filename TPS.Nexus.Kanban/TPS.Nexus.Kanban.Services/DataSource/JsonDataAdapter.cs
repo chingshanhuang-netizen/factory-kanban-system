@@ -9,14 +9,15 @@ public class JsonDataAdapter
     {
         var result = new DataResult();
         var path = config.FilePath
-            ?? throw new InvalidOperationException("FilePath is required for JSON source.");
+            ?? throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): FilePath is required for JSON source.");
 
         var json = await File.ReadAllTextAsync(path);
         using var doc = JsonDocument.Parse(json);
 
         var target = string.IsNullOrEmpty(config.QueryOrPath)
             ? doc.RootElement
-            : NavigatePath(doc.RootElement, config.QueryOrPath);
+            : NavigatePath(doc.RootElement, config.QueryOrPath, config.Name);
 
         if (target.ValueKind == JsonValueKind.Object)
         {
@@ -27,18 +28,24 @@ public class JsonDataAdapter
         return result;
     }
 
+    /// <remarks>
+    /// DS-3: JSON files are static snapshots without per-record timestamps. This method returns
+    /// all array items regardless of <paramref name="from"/> and <paramref name="to"/>. If
+    /// time-range filtering is required, include a timestamp field in each JSON object.
+    /// </remarks>
     public async Task<IEnumerable<DataResult>> FetchHistoryAsync(DataSourceConfig config, DateTime from, DateTime to)
     {
         var results = new List<DataResult>();
         var path = config.FilePath
-            ?? throw new InvalidOperationException("FilePath is required for JSON source.");
+            ?? throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): FilePath is required for JSON source.");
 
         var json = await File.ReadAllTextAsync(path);
         using var doc = JsonDocument.Parse(json);
 
         var target = string.IsNullOrEmpty(config.QueryOrPath)
             ? doc.RootElement
-            : NavigatePath(doc.RootElement, config.QueryOrPath);
+            : NavigatePath(doc.RootElement, config.QueryOrPath, config.Name);
 
         if (target.ValueKind == JsonValueKind.Array)
         {
@@ -55,22 +62,29 @@ public class JsonDataAdapter
         return results;
     }
 
-    private static JsonElement NavigatePath(JsonElement root, string path)
+    // DS-5: throw if a path segment is not found so callers know the configuration is wrong,
+    // rather than silently returning the last-matched parent node with unrelated data.
+    private static JsonElement NavigatePath(JsonElement root, string path, string configName)
     {
         var segments = path.Trim('/').Split('/');
         var current = root;
         foreach (var seg in segments)
-            if (current.TryGetProperty(seg, out var next))
-                current = next;
+        {
+            if (!current.TryGetProperty(seg, out var next))
+                throw new KeyNotFoundException(
+                    $"DataSourceConfig '{configName}': JSON path segment '{seg}' not found " +
+                    $"while navigating '{path}'. Check QueryOrPath configuration.");
+            current = next;
+        }
         return current;
     }
 
     private static object? ExtractValue(JsonElement el) => el.ValueKind switch
     {
         JsonValueKind.Number => el.TryGetInt64(out var l) ? l : el.GetDouble(),
-        JsonValueKind.True => true,
-        JsonValueKind.False => false,
-        JsonValueKind.Null => null,
-        _ => el.GetString()
+        JsonValueKind.True   => true,
+        JsonValueKind.False  => false,
+        JsonValueKind.Null   => null,
+        _                    => el.GetString()
     };
 }
