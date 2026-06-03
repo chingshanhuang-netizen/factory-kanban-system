@@ -1,0 +1,12 @@
+# Claude Code / tool state — never commit these
+.claude/
+.superpowers/
+
+# Scratch / demo files at repo root
+snake_game/
+new_file.txt
+claude_code_snake_game_f01.txt
+
+# Build artifacts
+**/bin/
+**/obj/
