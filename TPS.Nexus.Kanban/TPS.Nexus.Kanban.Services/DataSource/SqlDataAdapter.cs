@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Text.Json;
 using TPS.Nexus.Core;
 using TPS.Nexus.Kanban.Core.Models;
@@ -10,12 +11,12 @@ public class SqlDataAdapter
 
     public SqlDataAdapter(IDbConnectionFactory factory) => _factory = factory;
 
-    public Task<DataResult> FetchAsync(DataSourceConfig config)
+    public async Task<DataResult> FetchAsync(DataSourceConfig config)
     {
         var result = new DataResult();
-        using var conn = _factory.CreateConnection();
-        conn.Open();
-        using var cmd = conn.CreateCommand();
+        await using var conn = _factory.CreateConnection();
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
         cmd.CommandText = config.QueryOrPath
             ?? throw new InvalidOperationException("QueryOrPath is required for SQL source.");
 
@@ -39,22 +40,22 @@ public class SqlDataAdapter
             }
         }
 
-        using var reader = cmd.ExecuteReader();
-        if (reader.Read())
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
         {
             for (int i = 0; i < reader.FieldCount; i++)
                 result.Fields[reader.GetName(i)] = reader.GetValue(i);
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
-    public Task<IEnumerable<DataResult>> FetchHistoryAsync(DataSourceConfig config, DateTime from, DateTime to)
+    public async Task<IEnumerable<DataResult>> FetchHistoryAsync(DataSourceConfig config, DateTime from, DateTime to)
     {
         var results = new List<DataResult>();
-        using var conn = _factory.CreateConnection();
-        conn.Open();
-        using var cmd = conn.CreateCommand();
+        await using var conn = _factory.CreateConnection();
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
         cmd.CommandText = config.QueryOrPath
             ?? throw new InvalidOperationException("QueryOrPath is required for SQL source.");
 
@@ -68,8 +69,8 @@ public class SqlDataAdapter
         AddParam("@from", from);
         AddParam("@to", to);
 
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
+        await using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
         {
             var row = new DataResult();
             for (int i = 0; i < reader.FieldCount; i++)
@@ -77,6 +78,6 @@ public class SqlDataAdapter
             results.Add(row);
         }
 
-        return Task.FromResult<IEnumerable<DataResult>>(results);
+        return results;
     }
 }

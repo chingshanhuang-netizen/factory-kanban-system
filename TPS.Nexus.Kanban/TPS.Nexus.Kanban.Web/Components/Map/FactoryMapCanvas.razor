@@ -2,6 +2,7 @@
 @inject IEquipmentService EquipmentSvc
 @inject ILayoutService LayoutSvc
 @inject IAlarmService AlarmSvc
+@inject IMapImportService MapImportSvc
 @inject IFunctionPermissionService PermSvc
 @implements IAsyncDisposable
 
@@ -52,7 +53,7 @@
     private EquipmentWidget? HoveredWidget;
     private EquipmentWidget? SelectedWidget;
     private DataResult? HoveredData;
-    private DataResult? SelectedData;
+    private DataResult? SelectedData = null;
     private IEnumerable<DataResult> HistoryData = Enumerable.Empty<DataResult>();
     private IEnumerable<EquipmentLinkConfig> SelectedLinkConfigs = Enumerable.Empty<EquipmentLinkConfig>();
     private bool DrawerOpen;
@@ -64,6 +65,10 @@
     protected override async Task OnInitializedAsync()
     {
         DotNetRef = DotNetObjectReference.Create(this);
+
+        var maps = await MapImportSvc.GetAllAsync();
+        CurrentMap = maps.FirstOrDefault(m => m.Id == MapId);
+
         var published = await LayoutSvc.GetPublishedVersionAsync(MapId);
         if (published != null)
         {
@@ -86,11 +91,15 @@
     private async Task PollLoopAsync(CancellationToken ct)
     {
         _pollTimer = new PeriodicTimer(TimeSpan.FromSeconds(30));
-        while (await _pollTimer.WaitForNextTickAsync(ct))
+        try
         {
-            ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
-            await InvokeAsync(StateHasChanged);
+            while (await _pollTimer.WaitForNextTickAsync(ct))
+            {
+                ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
+                await InvokeAsync(StateHasChanged);
+            }
         }
+        catch (OperationCanceledException) { }
     }
 
     [JSInvokable]
@@ -142,9 +151,13 @@
     public async ValueTask DisposeAsync()
     {
         _cts.Cancel();
+        _cts.Dispose();
         _pollTimer?.Dispose();
         DotNetRef?.Dispose();
         if (IsEditMode)
-            await JS.InvokeVoidAsync("kanbanDrag.destroy");
+        {
+            try { await JS.InvokeVoidAsync("kanbanDrag.destroy"); }
+            catch (JSDisconnectedException) { }
+        }
     }
 }

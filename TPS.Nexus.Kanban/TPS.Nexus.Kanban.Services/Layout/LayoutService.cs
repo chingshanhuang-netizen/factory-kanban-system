@@ -1,3 +1,4 @@
+using System.Data;
 using Dapper;
 using TPS.Nexus.Core;
 using TPS.Nexus.Kanban.Core.Enums;
@@ -14,10 +15,36 @@ public class LayoutService : ILayoutService
 
     public async Task<LayoutVersion> SaveDraftAsync(int factoryMapId, string layoutJson, string createdBy)
     {
+        // B-2: Guard non-positive IDs before hitting the DB
+        if (factoryMapId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(factoryMapId),
+                $"factoryMapId must be a positive integer, got {factoryMapId}.");
+
         using var conn = _db.CreateConnection();
+        await conn.OpenAsync();
+
+        // B-1 fix: wrap MAX + INSERT in a transaction with SELECT FOR UPDATE to prevent
+        // concurrent requests from obtaining the same VersionNo for the same map.
+        using var tx = conn.BeginTransaction(IsolationLevel.RepeatableRead);
+
+        // B-2 fix: verify the map exists before creating a version for it.
+        var mapExists = await conn.ExecuteScalarAsync<int>(
+            "SELECT COUNT(1) FROM kanban_factory_maps WHERE Id=@Id",
+            new { Id = factoryMapId }, transaction: tx);
+
+        if (mapExists == 0)
+            throw new InvalidOperationException(
+                $"FactoryMap {factoryMapId} does not exist. Cannot create a version for a non-existent map.");
+
+        // FOR UPDATE locks matching rows so concurrent transactions serialise on this map's versions.
         var maxVersion = await conn.ExecuteScalarAsync<int>(
-            "SELECT COALESCE(MAX(VersionNo), 0) FROM kanban_layout_versions WHERE FactoryMapId=@FactoryMapId",
-            new { FactoryMapId = factoryMapId });
+            """
+            SELECT COALESCE(MAX(VersionNo), 0)
+            FROM kanban_layout_versions
+            WHERE FactoryMapId=@FactoryMapId
+            FOR UPDATE
+            """,
+            new { FactoryMapId = factoryMapId }, transaction: tx);
 
         var version = new LayoutVersion
         {
@@ -33,30 +60,52 @@ public class LayoutService : ILayoutService
             INSERT INTO kanban_layout_versions (FactoryMapId, VersionNo, Status, CreatedBy, PublishedAt, LayoutJson)
             VALUES (@FactoryMapId, @VersionNo, @Status, @CreatedBy, @PublishedAt, @LayoutJson);
             SELECT LAST_INSERT_ID();
-            """, version);
+            """, version, transaction: tx);
 
+        tx.Commit();
         return version;
     }
 
     public async Task<LayoutVersion> PublishAsync(int draftId)
     {
+        // B-4: Reject obviously invalid input early with a clear message.
+        if (draftId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(draftId),
+                $"draftId must be a positive integer, got {draftId}.");
+
         using var conn = _db.CreateConnection();
+        await conn.OpenAsync();
+
+        // B-3 fix: wrap archive + publish in a single transaction so the two UPDATEs are atomic.
+        // RepeatableRead prevents a concurrent Publish from archiving the same row between our two statements.
+        using var tx = conn.BeginTransaction(IsolationLevel.RepeatableRead);
+
         var draft = await conn.QueryFirstOrDefaultAsync<LayoutVersion>(
-            "SELECT * FROM kanban_layout_versions WHERE Id=@Id", new { Id = draftId })
+            "SELECT * FROM kanban_layout_versions WHERE Id=@Id FOR UPDATE",
+            new { Id = draftId }, transaction: tx)
             ?? throw new InvalidOperationException($"Layout version {draftId} not found.");
 
         if (draft.Status != LayoutStatus.Draft)
-            throw new InvalidOperationException($"Only Draft versions can be published. Current: {draft.Status}");
+            throw new InvalidOperationException(
+                $"Only Draft versions can be published. Version {draftId} is currently '{draft.Status}'.");
 
+        // Archive any existing Published version for this map before promoting the draft.
         await conn.ExecuteAsync(
-            "UPDATE kanban_layout_versions SET Status=@Archived WHERE FactoryMapId=@MapId AND Status=@Published",
-            new { Archived = (byte)LayoutStatus.Archived, MapId = draft.FactoryMapId, Published = (byte)LayoutStatus.Published });
+            """
+            UPDATE kanban_layout_versions
+            SET Status=@Archived
+            WHERE FactoryMapId=@MapId AND Status=@Published
+            """,
+            new { Archived = (byte)LayoutStatus.Archived, MapId = draft.FactoryMapId, Published = (byte)LayoutStatus.Published },
+            transaction: tx);
 
         draft.Status      = LayoutStatus.Published;
         draft.PublishedAt = DateTime.UtcNow;
         await conn.ExecuteAsync(
-            "UPDATE kanban_layout_versions SET Status=@Status, PublishedAt=@PublishedAt WHERE Id=@Id", draft);
+            "UPDATE kanban_layout_versions SET Status=@Status, PublishedAt=@PublishedAt WHERE Id=@Id",
+            draft, transaction: tx);
 
+        tx.Commit();
         return draft;
     }
 
@@ -78,17 +127,47 @@ public class LayoutService : ILayoutService
 
     public async Task RollbackAsync(int versionId)
     {
+        // B-6 (input guard): Reject obviously invalid IDs early.
+        if (versionId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(versionId),
+                $"versionId must be a positive integer, got {versionId}.");
+
         using var conn = _db.CreateConnection();
+        await conn.OpenAsync();
+
+        // B-6 fix: same transaction pattern as PublishAsync — archive + re-publish must be atomic.
+        using var tx = conn.BeginTransaction(IsolationLevel.RepeatableRead);
+
         var target = await conn.QueryFirstOrDefaultAsync<LayoutVersion>(
-            "SELECT * FROM kanban_layout_versions WHERE Id=@Id", new { Id = versionId })
+            "SELECT * FROM kanban_layout_versions WHERE Id=@Id FOR UPDATE",
+            new { Id = versionId }, transaction: tx)
             ?? throw new InvalidOperationException($"Layout version {versionId} not found.");
 
-        await conn.ExecuteAsync(
-            "UPDATE kanban_layout_versions SET Status=@Archived WHERE FactoryMapId=@MapId AND Status=@Published",
-            new { Archived = (byte)LayoutStatus.Archived, MapId = target.FactoryMapId, Published = (byte)LayoutStatus.Published });
+        // B-7 fix: only Archived versions are valid rollback targets.
+        // Rolling back a Draft would bypass the review/publish workflow.
+        // Rolling back an already-Published version is a no-op that also corrupts PublishedAt.
+        if (target.Status != LayoutStatus.Archived)
+            throw new InvalidOperationException(
+                $"Only Archived versions can be rolled back. Version {versionId} is currently '{target.Status}'.");
 
+        // Archive the current Published version for this map.
         await conn.ExecuteAsync(
-            "UPDATE kanban_layout_versions SET Status=@Published, PublishedAt=@Now WHERE Id=@Id",
-            new { Published = (byte)LayoutStatus.Published, Now = DateTime.UtcNow, Id = versionId });
+            """
+            UPDATE kanban_layout_versions
+            SET Status=@Archived
+            WHERE FactoryMapId=@MapId AND Status=@Published
+            """,
+            new { Archived = (byte)LayoutStatus.Archived, MapId = target.FactoryMapId, Published = (byte)LayoutStatus.Published },
+            transaction: tx);
+
+        // B-8 fix: preserve the original PublishedAt so the audit trail shows when this version
+        // was first published, not when the rollback happened. Use a separate RolledBackAt column
+        // if rollback time also needs recording (schema change — not done here).
+        await conn.ExecuteAsync(
+            "UPDATE kanban_layout_versions SET Status=@Published WHERE Id=@Id",
+            new { Published = (byte)LayoutStatus.Published, Id = versionId },
+            transaction: tx);
+
+        tx.Commit();
     }
 }
