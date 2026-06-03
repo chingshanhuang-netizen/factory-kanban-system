@@ -172,6 +172,36 @@ public class XmlDataAdapterTests
         File.Delete(tmpFile);
     }
 
+    // ── DA-5 variant: empty file (no XML content) is invalid XML ────────────
+
+    [Fact]
+    public async Task FetchAsync_EmptyXmlFile_ThrowsInvalidOperationWithContext()
+    {
+        var tmpFile = await WriteTempFileAsync("");
+        var config  = new DataSourceConfig { Name = "empty-xml", Id = 30, FilePath = tmpFile };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new XmlDataAdapter().FetchAsync(config));
+
+        Assert.Contains("empty-xml", ex.Message);
+        Assert.Contains("invalid XML", ex.Message);
+        File.Delete(tmpFile);
+    }
+
+    [Fact]
+    public async Task FetchHistoryAsync_EmptyXmlFile_ThrowsInvalidOperationWithContext()
+    {
+        var tmpFile = await WriteTempFileAsync("");
+        var config  = new DataSourceConfig { Name = "empty-xml-hist", Id = 31, FilePath = tmpFile };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new XmlDataAdapter().FetchHistoryAsync(config, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow));
+
+        Assert.Contains("empty-xml-hist", ex.Message);
+        Assert.Contains("invalid XML", ex.Message);
+        File.Delete(tmpFile);
+    }
+
     // ── DS-2: from > to guard (validated at DataSourceService level) ──────────
 
     [Fact]

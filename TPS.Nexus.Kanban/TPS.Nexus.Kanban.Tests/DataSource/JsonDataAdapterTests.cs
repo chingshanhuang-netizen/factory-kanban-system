@@ -170,6 +170,36 @@ public class JsonDataAdapterTests
         File.Delete(tmpFile);
     }
 
+    // ── DA-3 variant: empty file (no content) is invalid JSON ────────────────
+
+    [Fact]
+    public async Task FetchAsync_EmptyFile_ThrowsInvalidOperationWithContext()
+    {
+        var tmpFile = await WriteTempFileAsync("");
+        var config  = new DataSourceConfig { Name = "empty-json", Id = 20, FilePath = tmpFile };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new JsonDataAdapter().FetchAsync(config));
+
+        Assert.Contains("empty-json", ex.Message);
+        Assert.Contains("invalid JSON", ex.Message);
+        File.Delete(tmpFile);
+    }
+
+    [Fact]
+    public async Task FetchHistoryAsync_EmptyFile_ThrowsInvalidOperationWithContext()
+    {
+        var tmpFile = await WriteTempFileAsync("");
+        var config  = new DataSourceConfig { Name = "empty-json-hist", Id = 21, FilePath = tmpFile };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new JsonDataAdapter().FetchHistoryAsync(config, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow));
+
+        Assert.Contains("empty-json-hist", ex.Message);
+        Assert.Contains("invalid JSON", ex.Message);
+        File.Delete(tmpFile);
+    }
+
     private static async Task<string> WriteTempFileAsync(string content)
     {
         var path = Path.GetTempFileName();

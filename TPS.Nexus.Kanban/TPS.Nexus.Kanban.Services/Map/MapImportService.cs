@@ -66,6 +66,10 @@ public class MapImportService : IMapImportService
 
     public async Task DeleteAsync(int mapId)
     {
+        // S-7: DELETE WHERE Id=0 silently affects no rows and leaks physical files
+        if (mapId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(mapId), $"mapId must be positive, got {mapId}.");
+
         await using var conn = _db.CreateConnection();
 
         // MI-3: read FilePath/ThumbnailPath before deleting the DB record so we can clean up

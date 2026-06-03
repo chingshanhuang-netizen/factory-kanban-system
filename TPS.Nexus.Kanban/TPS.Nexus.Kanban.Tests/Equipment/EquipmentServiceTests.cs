@@ -149,4 +149,77 @@ public class EquipmentServiceTests
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => svc.DeleteDataSourceConfigAsync(id));
     }
+
+    // ── S-1: CreateEquipmentAsync — null equipment guard ─────────────────────
+
+    [Fact]
+    public async Task CreateEquipmentAsync_NullEquipment_ThrowsArgumentNullException()
+    {
+        var svc = CreateService();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => svc.CreateEquipmentAsync(null!));
+    }
+
+    // ── S-1: CreateEquipmentAsync — empty Name guard ──────────────────────────
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateEquipmentAsync_EmptyName_ThrowsArgumentException(string name)
+    {
+        var svc       = CreateService();
+        var equipment = new EquipmentModel { Name = name };
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => svc.CreateEquipmentAsync(equipment));
+    }
+
+    // ── S-2: UpdateEquipmentAsync — null and zero-Id guards ──────────────────
+
+    [Fact]
+    public async Task UpdateEquipmentAsync_NullEquipment_ThrowsArgumentNullException()
+    {
+        var svc = CreateService();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => svc.UpdateEquipmentAsync(null!));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task UpdateEquipmentAsync_NonPositiveId_ThrowsArgumentOutOfRange(int id)
+    {
+        var svc       = CreateService();
+        var equipment = new EquipmentModel { Id = id, Name = "Machine" };
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => svc.UpdateEquipmentAsync(equipment));
+    }
+
+    // ── S-3: SaveLinkConfigAsync — null config guard ──────────────────────────
+
+    [Fact]
+    public async Task SaveLinkConfigAsync_NullConfig_ThrowsArgumentNullException()
+    {
+        var svc = CreateService();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => svc.SaveLinkConfigAsync(null!));
+    }
+
+    // ── S-3: SaveLinkConfigAsync — non-positive EquipmentId on INSERT guard ───
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task SaveLinkConfigAsync_InsertWithNonPositiveEquipmentId_ThrowsArgumentOutOfRange(int equipmentId)
+    {
+        var svc    = CreateService();
+        var config = new EquipmentLinkConfig { Id = 0, EquipmentId = equipmentId }; // Id=0 triggers INSERT path
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => svc.SaveLinkConfigAsync(config));
+    }
 }

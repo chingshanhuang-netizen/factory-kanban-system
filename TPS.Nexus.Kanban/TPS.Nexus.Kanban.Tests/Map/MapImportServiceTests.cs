@@ -164,6 +164,32 @@ public class MapImportServiceTests
         Directory.Delete(storageRoot, recursive: true);
     }
 
+    // ── Unsupported format type ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task ImportAsync_UnsupportedFormatType_ThrowsNotSupportedException()
+    {
+        var (svc, _) = CreateMapImportService();
+        using var stream = new MemoryStream(new byte[] { 0x00 });
+
+        await Assert.ThrowsAsync<NotSupportedException>(
+            () => svc.ImportAsync(stream, "unknown.xyz", (MapFormatType)99));
+    }
+
+    // ── S-7: DeleteAsync must reject non-positive mapId ───────────────────────
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(int.MinValue)]
+    public async Task DeleteAsync_NonPositiveMapId_ThrowsArgumentOutOfRange(int mapId)
+    {
+        var (svc, _) = CreateMapImportService();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => svc.DeleteAsync(mapId));
+    }
+
     private static (Services.Map.MapImportService svc, string storageRoot) CreateMapImportService()
     {
         var storageRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());

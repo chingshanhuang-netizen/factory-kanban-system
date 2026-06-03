@@ -29,6 +29,7 @@ public class EquipmentService : IEquipmentService
 
     public async Task<EquipmentModel> CreateEquipmentAsync(EquipmentModel equipment)
     {
+        ArgumentNullException.ThrowIfNull(equipment);
         if (string.IsNullOrWhiteSpace(equipment.Name))
             throw new ArgumentException("Equipment.Name must not be empty.", nameof(equipment));
 
@@ -44,6 +45,11 @@ public class EquipmentService : IEquipmentService
 
     public async Task UpdateEquipmentAsync(EquipmentModel equipment)
     {
+        ArgumentNullException.ThrowIfNull(equipment);
+        if (equipment.Id <= 0)
+            throw new ArgumentOutOfRangeException(nameof(equipment),
+                $"Equipment.Id must be positive for UPDATE, got {equipment.Id}.");
+
         await using var conn = _db.CreateConnection();
         await conn.ExecuteAsync(
             """
@@ -172,6 +178,12 @@ public class EquipmentService : IEquipmentService
 
     public async Task SaveLinkConfigAsync(EquipmentLinkConfig config)
     {
+        ArgumentNullException.ThrowIfNull(config);
+        // S-3: an INSERT with EquipmentId=0 creates an orphaned record with no valid parent
+        if (config.Id == 0 && config.EquipmentId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(config),
+                $"EquipmentLinkConfig.EquipmentId must be positive for INSERT, got {config.EquipmentId}.");
+
         await using var conn = _db.CreateConnection();
         if (config.Id == 0)
             await conn.ExecuteAsync(

@@ -30,8 +30,19 @@ public class IconUploadService : IIconUploadService
         var savedName = $"{Guid.NewGuid()}{ext}";
         var fullPath  = Path.Combine(_iconDir, savedName);
 
-        await using var fs = File.Create(fullPath);
-        await file.CopyToAsync(fs);
+        // S-5: if CopyToAsync fails mid-stream, clean up the partial file so it does not
+        // accumulate as an orphaned entry in the icons directory.
+        try
+        {
+            await using var fs = File.Create(fullPath);
+            await file.CopyToAsync(fs);
+        }
+        catch
+        {
+            if (File.Exists(fullPath))
+                try { File.Delete(fullPath); } catch (IOException) { }
+            throw;
+        }
 
         return $"{KanbanAssets.ModulePrefix}/{KanbanAssets.IconsSubdir}/{savedName}";
     }

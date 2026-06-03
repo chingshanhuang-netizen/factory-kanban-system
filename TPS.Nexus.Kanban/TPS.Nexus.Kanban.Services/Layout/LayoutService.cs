@@ -20,6 +20,13 @@ public class LayoutService : ILayoutService
             throw new ArgumentOutOfRangeException(nameof(factoryMapId),
                 $"factoryMapId must be a positive integer, got {factoryMapId}.");
 
+        // S-6: null/empty layoutJson or createdBy would store NULL in NOT NULL DB columns
+        if (string.IsNullOrWhiteSpace(layoutJson))
+            throw new ArgumentException("layoutJson must not be null or whitespace.", nameof(layoutJson));
+
+        if (string.IsNullOrWhiteSpace(createdBy))
+            throw new ArgumentException("createdBy must not be null or whitespace.", nameof(createdBy));
+
         await using var conn = _db.CreateConnection();
         await conn.OpenAsync();
 

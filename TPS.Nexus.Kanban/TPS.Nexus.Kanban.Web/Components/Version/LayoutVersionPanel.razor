@@ -38,6 +38,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // V-2: guard MapId before calling services — GetVersionHistoryAsync throws on MapId≤0
+        // and an unhandled exception in a lifecycle method crashes the Blazor circuit.
+        if (MapId <= 0) return;
+
         CanPublish = await PermSvc.HasPermissionAsync(KanbanPermissions.Publish);
         await LoadVersions();
     }

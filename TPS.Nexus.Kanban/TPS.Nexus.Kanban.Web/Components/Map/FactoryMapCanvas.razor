@@ -72,6 +72,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // V-1: markup @if guard does not prevent lifecycle methods from running;
+        // guard here so service calls are skipped when MapId is not yet resolved.
+        if (MapId <= 0) return;
+
         DotNetRef = DotNetObjectReference.Create(this);
 
         var maps = await MapImportSvc.GetAllAsync();
