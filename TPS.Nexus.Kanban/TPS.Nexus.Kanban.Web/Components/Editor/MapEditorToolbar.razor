@@ -1,47 +1,37 @@
 @inject IFunctionPermissionService PermSvc
 
-<RadzenToolbar Style="background:#0d1b2a;border-bottom:1px solid #1a3a5c;padding:4px 12px">
-    <RadzenToolbarItem>
-        <span style="color:#aaa;font-size:0.85em">
-            🗺️ <strong style="color:#fff">@MapName</strong>
-            @if (PublishedVersion != null)
-            {
-                <span style="color:#888"> · v@(PublishedVersion.VersionNo) 已發布</span>
-            }
-        </span>
-    </RadzenToolbarItem>
+<div style="display:flex;align-items:center;gap:8px;background:#0d1b2a;border-bottom:1px solid #1a3a5c;padding:4px 12px">
+    <span style="color:#aaa;font-size:0.85em">
+        🗺️ <strong style="color:#fff">@MapName</strong>
+        @if (PublishedVersion != null)
+        {
+            <span style="color:#888"> · v@(PublishedVersion.VersionNo) 已發布</span>
+        }
+    </span>
 
     @if (CanEdit)
     {
-        <RadzenToolbarItem>
-            <RadzenButton Text="@(IsEditMode ? "✅ 完成編輯" : "✏️ 編輯")"
-                          ButtonStyle="@(IsEditMode ? ButtonStyle.Success : ButtonStyle.Secondary)"
-                          Size="ButtonSize.Small"
-                          Click="@ToggleEditMode" />
-        </RadzenToolbarItem>
+        <RadzenButton Text="@(IsEditMode ? "✅ 完成編輯" : "✏️ 編輯")"
+                      ButtonStyle="@(IsEditMode ? ButtonStyle.Success : ButtonStyle.Secondary)"
+                      Size="ButtonSize.Small"
+                      Click="@ToggleEditMode" />
     }
 
     @if (IsEditMode)
     {
-        <RadzenToolbarItem>
-            <RadzenButton Text="💾 存草稿" ButtonStyle="ButtonStyle.Warning"
-                          Size="ButtonSize.Small" Click="@SaveDraft" />
-        </RadzenToolbarItem>
+        <RadzenButton Text="💾 存草稿" ButtonStyle="ButtonStyle.Warning"
+                      Size="ButtonSize.Small" Click="@SaveDraft" />
 
         @if (CanPublish)
         {
-            <RadzenToolbarItem>
-                <RadzenButton Text="🚀 發布" ButtonStyle="ButtonStyle.Primary"
-                              Size="ButtonSize.Small" Click="@Publish" />
-            </RadzenToolbarItem>
+            <RadzenButton Text="🚀 發布" ButtonStyle="ButtonStyle.Primary"
+                          Size="ButtonSize.Small" Click="@Publish" />
         }
     }
 
-    <RadzenToolbarItem>
-        <RadzenButton Text="📋 版本" ButtonStyle="ButtonStyle.Light"
-                      Size="ButtonSize.Small" Click="@ShowVersionPanel" />
-    </RadzenToolbarItem>
-</RadzenToolbar>
+    <RadzenButton Text="📋 版本" ButtonStyle="ButtonStyle.Light"
+                  Size="ButtonSize.Small" Click="@ShowVersionPanel" />
+</div>
 
 @code {
     [Parameter] public string MapName { get; set; } = string.Empty;
