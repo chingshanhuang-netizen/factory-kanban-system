@@ -14,6 +14,13 @@ public class IconUploadService : IIconUploadService
 
     public async Task<string> UploadAsync(Stream file, string fileName)
     {
+        // IU-2: null stream produces NullReferenceException at file.CopyToAsync
+        ArgumentNullException.ThrowIfNull(file);
+
+        // IU-1: null/empty fileName produces ArgumentNullException in Path.GetExtension
+        if (string.IsNullOrWhiteSpace(fileName))
+            throw new ArgumentException("fileName must not be null or whitespace.", nameof(fileName));
+
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
         if (ext is not ".png" and not ".jpg" and not ".jpeg" and not ".svg")
             throw new InvalidOperationException("Only PNG, JPG, and SVG icons are supported.");
