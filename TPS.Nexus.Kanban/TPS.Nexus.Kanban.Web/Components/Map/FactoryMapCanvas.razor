@@ -1,0 +1,150 @@
+@inject IJSRuntime JS
+@inject IEquipmentService EquipmentSvc
+@inject ILayoutService LayoutSvc
+@inject IAlarmService AlarmSvc
+@inject IFunctionPermissionService PermSvc
+@implements IAsyncDisposable
+
+<div id="map-canvas"
+     class="kanban-map-container @(IsEditMode ? "kanban-edit-mode" : "")"
+     style="width:100%;height:@(CanvasHeight)px;position:relative;">
+
+    <MapLayer Map="@CurrentMap" />
+
+    <div class="kanban-equipment-layer">
+        @foreach (var widget in Widgets)
+        {
+            <EquipmentWidgetPanel
+                Widget="@widget"
+                EquipmentData="@GetEquipment(widget.EquipmentId)"
+                ActiveAlarm="@GetActiveAlarm(widget.EquipmentId)"
+                IsRunning="@GetIsRunning(widget.EquipmentId)"
+                OnClick="@((w) => HandleWidgetClick(w))"
+                OnHover="@((w) => HandleWidgetHover(w))"
+                OnHoverEnd="@HandleHoverEnd" />
+        }
+    </div>
+
+    <EquipmentTooltip
+        Widget="@HoveredWidget"
+        EquipmentData="@GetEquipment(HoveredWidget?.EquipmentId ?? 0)"
+        LatestData="@HoveredData" />
+
+    <EquipmentDetailDrawer
+        @bind-IsOpen="DrawerOpen"
+        Widget="@SelectedWidget"
+        EquipmentData="@GetEquipment(SelectedWidget?.EquipmentId ?? 0)"
+        LatestData="@SelectedData"
+        HistoryData="@HistoryData"
+        LinkConfigs="@SelectedLinkConfigs" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int MapId { get; set; }
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public int CanvasHeight { get; set; } = 600;
+
+    private FactoryMap? CurrentMap;
+    private List<EquipmentWidget> Widgets = new();
+    private List<Equipment> AllEquipment = new();
+    private List<AlarmRecord> ActiveAlarms = new();
+
+    private EquipmentWidget? HoveredWidget;
+    private EquipmentWidget? SelectedWidget;
+    private DataResult? HoveredData;
+    private DataResult? SelectedData;
+    private IEnumerable<DataResult> HistoryData = Enumerable.Empty<DataResult>();
+    private IEnumerable<EquipmentLinkConfig> SelectedLinkConfigs = Enumerable.Empty<EquipmentLinkConfig>();
+    private bool DrawerOpen;
+
+    private DotNetObjectReference<FactoryMapCanvas>? DotNetRef;
+    private PeriodicTimer? _pollTimer;
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        DotNetRef = DotNetObjectReference.Create(this);
+        var published = await LayoutSvc.GetPublishedVersionAsync(MapId);
+        if (published != null)
+        {
+            Widgets = (await EquipmentSvc.GetWidgetsByVersionAsync(published.Id)).ToList();
+        }
+        AllEquipment = (await EquipmentSvc.GetAllEquipmentAsync()).ToList();
+        ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
+
+        _ = PollLoopAsync(_cts.Token);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && IsEditMode)
+        {
+            await JS.InvokeVoidAsync("kanbanDrag.init", "map-canvas", DotNetRef);
+        }
+    }
+
+    private async Task PollLoopAsync(CancellationToken ct)
+    {
+        _pollTimer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+        while (await _pollTimer.WaitForNextTickAsync(ct))
+        {
+            ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnEquipmentMoved(string equipmentIdStr, int x, int y)
+    {
+        if (!int.TryParse(equipmentIdStr, out var equipmentId)) return;
+        var widget = Widgets.FirstOrDefault(w => w.EquipmentId == equipmentId);
+        if (widget == null) return;
+        widget.PositionX = x;
+        widget.PositionY = y;
+        await EquipmentSvc.SaveWidgetAsync(widget);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleWidgetClick(EquipmentWidget widget)
+    {
+        SelectedWidget = widget;
+        SelectedLinkConfigs = await EquipmentSvc.GetLinkConfigsAsync(widget.EquipmentId);
+        DrawerOpen = true;
+    }
+
+    private async Task HandleWidgetHover(EquipmentWidget widget)
+    {
+        HoveredWidget = widget;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleHoverEnd()
+    {
+        HoveredWidget = null;
+        HoveredData = null;
+    }
+
+    private Equipment? GetEquipment(int equipmentId)
+        => AllEquipment.FirstOrDefault(e => e.Id == equipmentId);
+
+    private AlarmLevel? GetActiveAlarm(int equipmentId)
+    {
+        var alarm = ActiveAlarms
+            .Where(a => a.EquipmentId == equipmentId)
+            .OrderByDescending(a => a.Level)
+            .FirstOrDefault();
+        return alarm?.Level;
+    }
+
+    private bool GetIsRunning(int equipmentId)
+        => !ActiveAlarms.Any(a => a.EquipmentId == equipmentId);
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts.Cancel();
+        _pollTimer?.Dispose();
+        DotNetRef?.Dispose();
+        if (IsEditMode)
+            await JS.InvokeVoidAsync("kanbanDrag.destroy");
+    }
+}
