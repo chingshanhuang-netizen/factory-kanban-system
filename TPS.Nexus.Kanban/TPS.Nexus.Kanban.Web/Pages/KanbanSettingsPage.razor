@@ -1,0 +1,207 @@
+@page "/kanban/settings"
+@inject IEquipmentService EquipmentSvc
+@inject IIconUploadService IconSvc
+@inject IFunctionPermissionService PermSvc
+@inject IMapImportService MapImportSvc
+@inject NotificationService NotifySvc
+
+<PageTitle>看板設定</PageTitle>
+
+@if (!CanSettings)
+{
+    <div style="padding:40px;text-align:center;color:#f44336">無設定權限（需要 KANBAN_SETTINGS）</div>
+    return;
+}
+
+<div style="padding:16px">
+    <RadzenText TextStyle="TextStyle.H5">看板設定</RadzenText>
+
+    <RadzenTabs>
+        <Tabs>
+            <RadzenTabsItem Text="設備管理">
+                <div style="margin-bottom:12px">
+                    <RadzenButton Text="+ 新增設備" ButtonStyle="ButtonStyle.Primary"
+                                  Size="ButtonSize.Small" Click="@AddEquipment" />
+                </div>
+                <RadzenDataGrid @ref="_equipGrid" Data="@AllEquipment" TItem="Equipment"
+                                EditMode="DataGridEditMode.Single"
+                                RowUpdate="@OnEquipmentUpdate">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="Equipment" Property="Name" Title="名稱">
+                            <EditTemplate Context="eq">
+                                <RadzenTextBox @bind-Value="eq.Name" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Equipment" Property="Tag" Title="標籤">
+                            <EditTemplate Context="eq">
+                                <RadzenTextBox @bind-Value="eq.Tag" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Equipment" Title="圖示" Width="80px">
+                            <Template Context="eq">
+                                <EquipmentIconRenderer Equipment="@eq" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Equipment" Title="操作" Width="120px">
+                            <Template Context="eq">
+                                <RadzenButton Text="編輯" Size="ButtonSize.ExtraSmall"
+                                              Click="@(() => _equipGrid?.EditRow(eq))" />
+                                <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Click="@(() => DeleteEquipment(eq.Id))"
+                                              Style="margin-left:4px" />
+                            </Template>
+                            <EditTemplate Context="eq">
+                                <RadzenButton Text="儲存" Size="ButtonSize.ExtraSmall"
+                                              ButtonStyle="ButtonStyle.Primary"
+                                              Click="@(() => _equipGrid?.UpdateRow(eq))" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="資料來源">
+                <div style="margin-bottom:12px">
+                    <RadzenButton Text="+ 新增資料來源" ButtonStyle="ButtonStyle.Primary"
+                                  Size="ButtonSize.Small" Click="@AddDataSource" />
+                </div>
+                <RadzenDataGrid Data="@AllDataSources" TItem="DataSourceConfig"
+                                EditMode="DataGridEditMode.Single"
+                                RowUpdate="@OnDataSourceUpdate">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="DataSourceConfig" Property="Name" Title="名稱">
+                            <EditTemplate Context="ds">
+                                <RadzenTextBox @bind-Value="ds.Name" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="DataSourceConfig" Property="SourceType" Title="類型" Width="80px" />
+                        <RadzenDataGridColumn TItem="DataSourceConfig" Property="QueryOrPath" Title="查詢/路徑">
+                            <EditTemplate Context="ds">
+                                <RadzenTextArea @bind-Value="ds.QueryOrPath" Style="width:100%;height:60px" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="圖示上傳">
+                <RadzenCard Style="max-width:400px">
+                    <RadzenText TextStyle="TextStyle.Subtitle1">上傳設備圖示</RadzenText>
+                    <InputFile OnChange="@OnIconFileSelected"
+                               accept=".png,.jpg,.jpeg,.svg"
+                               style="color:#aaa;width:100%;margin-top:8px" />
+                    <RadzenButton Text="上傳" ButtonStyle="ButtonStyle.Primary"
+                                  Style="margin-top:8px;width:100%"
+                                  Disabled="@(_iconFile == null)"
+                                  Click="@DoIconUpload" />
+                    @if (!string.IsNullOrEmpty(IconUploadResult))
+                    {
+                        <div style="margin-top:8px;color:#4caf50;font-size:0.85em;word-break:break-all">
+                            @IconUploadResult
+                        </div>
+                    }
+                </RadzenCard>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem Text="地圖管理">
+                <MapImportPanel OnImported="@OnMapImported" />
+                <div style="margin-top:16px">
+                    <RadzenText TextStyle="TextStyle.Subtitle1">已匯入地圖</RadzenText>
+                    <RadzenDataGrid Data="@AllMaps" TItem="FactoryMap" Style="margin-top:8px">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="FactoryMap" Property="Name" Title="名稱" />
+                            <RadzenDataGridColumn TItem="FactoryMap" Property="FormatType" Title="格式" Width="80px" />
+                            <RadzenDataGridColumn TItem="FactoryMap" Property="CreatedAt" Title="建立時間"
+                                                  FormatString="{0:yyyy-MM-dd}" Width="100px" />
+                            <RadzenDataGridColumn TItem="FactoryMap" Title="操作" Width="80px">
+                                <Template Context="m">
+                                    <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
+                                                  ButtonStyle="ButtonStyle.Danger"
+                                                  Click="@(() => DeleteMap(m.Id))" />
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                </div>
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</div>
+
+@code {
+    private bool CanSettings;
+    private List<Equipment> AllEquipment = new();
+    private List<DataSourceConfig> AllDataSources = new();
+    private List<FactoryMap> AllMaps = new();
+    private RadzenDataGrid<Equipment>? _equipGrid;
+    private IBrowserFile? _iconFile;
+    private string IconUploadResult = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CanSettings = await PermSvc.HasPermissionAsync("KANBAN_SETTINGS");
+        if (!CanSettings) return;
+        await LoadAll();
+    }
+
+    private async Task LoadAll()
+    {
+        AllEquipment   = (await EquipmentSvc.GetAllEquipmentAsync()).ToList();
+        AllDataSources = (await EquipmentSvc.GetAllDataSourceConfigsAsync()).ToList();
+        AllMaps        = (await MapImportSvc.GetAllAsync()).ToList();
+    }
+
+    private void AddEquipment()
+    {
+        AllEquipment.Insert(0, new Equipment { Name = "新設備" });
+    }
+
+    private async Task OnEquipmentUpdate(Equipment eq)
+    {
+        if (eq.Id == 0) await EquipmentSvc.CreateEquipmentAsync(eq);
+        else await EquipmentSvc.UpdateEquipmentAsync(eq);
+        await LoadAll();
+    }
+
+    private async Task DeleteEquipment(int id)
+    {
+        await EquipmentSvc.DeleteEquipmentAsync(id);
+        AllEquipment.RemoveAll(e => e.Id == id);
+    }
+
+    private void AddDataSource()
+    {
+        AllDataSources.Insert(0, new DataSourceConfig { Name = "新資料來源" });
+    }
+
+    private async Task OnDataSourceUpdate(DataSourceConfig ds)
+    {
+        await EquipmentSvc.SaveDataSourceConfigAsync(ds);
+        await LoadAll();
+    }
+
+    private void OnIconFileSelected(InputFileChangeEventArgs args)
+    {
+        _iconFile = args.File;
+    }
+
+    private async Task DoIconUpload()
+    {
+        if (_iconFile == null) return;
+        await using var stream = _iconFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+        IconUploadResult = await IconSvc.UploadAsync(stream, _iconFile.Name);
+        NotifySvc.Notify(NotificationSeverity.Success, "圖示已上傳", IconUploadResult);
+    }
+
+    private async Task OnMapImported(FactoryMap map)
+    {
+        AllMaps = (await MapImportSvc.GetAllAsync()).ToList();
+    }
+
+    private async Task DeleteMap(int id)
+    {
+        await MapImportSvc.DeleteAsync(id);
+        AllMaps.RemoveAll(m => m.Id == id);
+    }
+}
