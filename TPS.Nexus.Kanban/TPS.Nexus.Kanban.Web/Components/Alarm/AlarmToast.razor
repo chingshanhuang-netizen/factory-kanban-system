@@ -1,0 +1,27 @@
+@inject NotificationService NotificationSvc
+@implements IDisposable
+
+<RadzenNotification />
+
+@code {
+    [Parameter] public Microsoft.AspNetCore.SignalR.Client.HubConnection? HubConnection { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        HubConnection?.On<int, string, string>("ReceiveAlarm", (equipmentId, level, message) =>
+        {
+            var severity = level switch
+            {
+                "Critical" => NotificationSeverity.Error,
+                "Warning"  => NotificationSeverity.Warning,
+                _ => NotificationSeverity.Info
+            };
+            NotificationSvc.Notify(severity, $"警報 [{level}]", message, duration: 5000);
+        });
+    }
+
+    public void Dispose()
+    {
+        HubConnection?.Remove("ReceiveAlarm");
+    }
+}

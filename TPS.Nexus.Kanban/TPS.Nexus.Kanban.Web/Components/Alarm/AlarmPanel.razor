@@ -1,0 +1,40 @@
+@inject IAlarmService AlarmSvc
+
+<div style="background:#0d1b2a;border:1px solid #7f0000;border-radius:6px;padding:12px;max-height:300px;overflow-y:auto">
+    <div style="color:#f44336;font-weight:bold;margin-bottom:8px">⚠ 活躍警報 (@Alarms.Count)</div>
+    @foreach (var alarm in Alarms.OrderByDescending(a => a.Level).ThenByDescending(a => a.TriggeredAt))
+    {
+        <div style="border-bottom:1px solid #1a1a2e;padding:6px 0;font-size:0.82em">
+            <div style="display:flex;justify-content:space-between">
+                <span style="color:@LevelColor(alarm.Level)">[@alarm.Level] @alarm.EquipmentName</span>
+                <RadzenButton Text="解除" Size="ButtonSize.ExtraSmall"
+                              ButtonStyle="ButtonStyle.Danger"
+                              Click="@(() => Resolve(alarm.Id))" />
+            </div>
+            <div style="color:#888">@alarm.Message</div>
+            <div style="color:#555;font-size:0.85em">@alarm.TriggeredAt.ToString("HH:mm:ss")</div>
+        </div>
+    }
+    @if (!Alarms.Any())
+    {
+        <div style="color:#555;text-align:center;padding:16px">無活躍警報</div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<AlarmRecord> Alarms { get; set; } = new();
+    [Parameter] public EventCallback OnResolved { get; set; }
+
+    private async Task Resolve(int id)
+    {
+        await AlarmSvc.ResolveAlarmAsync(id);
+        await OnResolved.InvokeAsync();
+    }
+
+    private static string LevelColor(AlarmLevel l) => l switch
+    {
+        AlarmLevel.Critical => "#f44336",
+        AlarmLevel.Warning  => "#ff9800",
+        _ => "#2196f3"
+    };
+}
