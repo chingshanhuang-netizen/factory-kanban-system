@@ -38,7 +38,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        CanPublish = await PermSvc.HasPermissionAsync("KANBAN_PUBLISH");
+        CanPublish = await PermSvc.HasPermissionAsync(KanbanPermissions.Publish);
         await LoadVersions();
     }
 

@@ -1,0 +1,54 @@
+@{
+    Layout  = null;
+    ViewData["Title"] = "貪食蛇";
+}
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>貪食蛇</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; }
+    .game-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Segoe UI', sans-serif; color: #eee; }
+    h1 { font-size: 2.4rem; margin-bottom: 12px; color: #4ecca3; letter-spacing: 4px; text-shadow: 0 0 20px #4ecca388; }
+    .scoreboard { display: flex; gap: 40px; margin-bottom: 16px; font-size: 1.1rem; }
+    .scoreboard span { color: #4ecca3; font-weight: bold; font-size: 1.3rem; }
+    #gameCanvas { border: 2px solid #4ecca3; border-radius: 6px; box-shadow: 0 0 30px #4ecca344; background: #16213e; display: block; }
+    .msg { margin-top: 18px; font-size: 1rem; color: #aaa; height: 22px; text-align: center; }
+    .msg b { color: #4ecca3; }
+    .controls { margin-top: 20px; display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 48px); gap: 6px; }
+    .cbtn { background: #16213e; border: 1.5px solid #4ecca3; border-radius: 8px; color: #4ecca3; font-size: 1.3rem; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
+    .cbtn:active { background: #4ecca322; }
+    .cbtn-up { grid-column: 2; grid-row: 1; }
+    .cbtn-left { grid-column: 1; grid-row: 2; }
+    .cbtn-down { grid-column: 2; grid-row: 2; }
+    .cbtn-right { grid-column: 3; grid-row: 2; }
+    .restart-btn { margin-top: 16px; padding: 10px 32px; background: transparent; border: 2px solid #4ecca3; border-radius: 8px; color: #4ecca3; font-size: 1rem; cursor: pointer; letter-spacing: 2px; transition: background 0.2s; }
+    .restart-btn:hover { background: #4ecca322; }
+  </style>
+</head>
+<body>
+  <div class="game-wrap">
+    <h1>🐍 貪食蛇</h1>
+    <div class="scoreboard">
+      <div>分數：<span id="score">0</span></div>
+      <div>最高：<span id="best">0</span></div>
+    </div>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div class="msg" id="msg">連線中…</div>
+    <div class="controls">
+      <button class="cbtn cbtn-up"    id="btn-up">▲</button>
+      <button class="cbtn cbtn-left"  id="btn-left">◀</button>
+      <button class="cbtn cbtn-down"  id="btn-down">▼</button>
+      <button class="cbtn cbtn-right" id="btn-right">▶</button>
+    </div>
+    <button class="restart-btn" id="btn-restart">重新開始</button>
+  </div>
+
+  <script src="https://unpkg.com/@@microsoft/signalr@@latest/dist/browser/signalr.min.js"></script>
+  <script src="~/snake.js"></script>
+  <script src="~/game-client.js"></script>
+</body>
+</html>

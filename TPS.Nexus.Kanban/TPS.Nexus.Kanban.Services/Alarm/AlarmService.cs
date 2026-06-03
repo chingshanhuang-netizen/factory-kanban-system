@@ -252,10 +252,4 @@ public class AlarmService : IAlarmService
         return await conn.QueryAsync<DataSourceConfig>("SELECT * FROM kanban_datasource_configs");
     }
 
-    private async Task<DataSourceConfig?> GetDataSourceConfigAsync(int configId)
-    {
-        await using var conn = _db.CreateConnection();
-        return await conn.QueryFirstOrDefaultAsync<DataSourceConfig>(
-            "SELECT * FROM kanban_datasource_configs WHERE Id=@Id", new { Id = configId });
-    }
 }

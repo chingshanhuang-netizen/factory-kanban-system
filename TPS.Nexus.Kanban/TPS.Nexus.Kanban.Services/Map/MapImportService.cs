@@ -3,7 +3,6 @@ using TPS.Nexus.Core;
 using TPS.Nexus.Kanban.Core.Enums;
 using TPS.Nexus.Kanban.Core.Interfaces;
 using TPS.Nexus.Kanban.Core.Models;
-using IWebHostEnvironmentAccessor = TPS.Nexus.Kanban.Core.Interfaces.IWebHostEnvironmentAccessor;
 
 namespace TPS.Nexus.Kanban.Services.Map;
 

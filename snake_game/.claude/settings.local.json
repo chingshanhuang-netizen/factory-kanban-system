@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Stop-Process *)",
+      "PowerShell(py *)",
+      "PowerShell(winget install *)",
+      "PowerShell(python -c \"print\\('hello'\\)\" 2>&1)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(& \"C:\\\\Users\\\\Sean\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python313\\\\python.exe\" -c \"print\\('hello'\\)\")",
+      "PowerShell(netstat *)",
+      "PowerShell(dotnet --version; dotnet --list-sdks)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Sean\\\\claude_code_project_demo\\\\snake_game\" -Force | Where-Object { $_.Name -ne \"SnakeGameCSharp\" } | Select-Object Name, PSIsContainer)"
+    ]
+  }
+}

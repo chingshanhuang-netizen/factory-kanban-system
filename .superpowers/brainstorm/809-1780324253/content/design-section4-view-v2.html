@@ -1,0 +1,111 @@
+<h2>設計第四節（更新）：設備互動資訊展示</h2>
+<p class="subtitle">Hover 快覽 Tooltip + Click 詳細資訊 Drawer</p>
+
+<div class="section">
+  <h3>互動行為設計</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+      <div><strong>Hover（滑鼠移入）</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">顯示 EquipmentTooltip — 快速摘要</div>
+      <div style="margin-left:1.5em;color:#aaa">內容：設備名稱、目前狀態、最近一筆警報</div>
+      <div style="margin-top:0.5em"><strong>Click（點擊設備圖示）</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">展開 EquipmentDetailDrawer — 側欄詳細資訊</div>
+      <div style="margin-left:1.5em;color:#aaa">可設定多個 Link 頁籤（工單、警報原因、自訂連結...）</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>畫面示意</h3>
+  <div class="mockup">
+    <div class="mockup-header">Click 設備後展開 Drawer</div>
+    <div class="mockup-body" style="padding:0;display:flex;height:280px">
+      <!-- Map area -->
+      <div style="flex:1;background:#1a1a2e;position:relative">
+        <div style="position:absolute;top:60px;left:80px;background:#0f3460;border:2px solid #4caf50;border-radius:6px;padding:8px;width:130px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:1.1em">⚙️</span>
+            <span style="color:#fff;font-size:0.78em;font-weight:bold">CNC-01</span>
+            <span style="background:#4caf50;color:#fff;font-size:0.6em;padding:1px 5px;border-radius:3px">運行中</span>
+          </div>
+          <div style="color:#aaa;font-size:0.7em;margin-top:4px">轉速：1,200 RPM</div>
+        </div>
+        <div style="position:absolute;top:30px;left:55px;color:#888;font-size:0.65em">← 已選取（藍框）</div>
+      </div>
+      <!-- Drawer -->
+      <div style="width:220px;background:#111;border-left:1px solid #333;display:flex;flex-direction:column">
+        <div style="background:#0d2137;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+          <span style="color:#fff;font-size:0.82em;font-weight:bold">⚙️ CNC-01</span>
+          <span style="color:#888;font-size:0.75em;cursor:pointer">✕</span>
+        </div>
+        <!-- Tabs -->
+        <div style="display:flex;border-bottom:1px solid #222">
+          <div style="padding:5px 10px;font-size:0.72em;color:#4caf50;border-bottom:2px solid #4caf50">工單</div>
+          <div style="padding:5px 10px;font-size:0.72em;color:#666">警報原因</div>
+          <div style="padding:5px 10px;font-size:0.72em;color:#666">文件</div>
+          <div style="padding:5px 10px;font-size:0.72em;color:#666">自訂</div>
+        </div>
+        <!-- Tab content -->
+        <div style="padding:10px;flex:1;overflow-y:auto">
+          <div style="background:#0d2137;border-radius:4px;padding:7px;margin-bottom:6px;font-size:0.72em">
+            <div style="color:#fff;font-weight:bold">WO-2026-0432</div>
+            <div style="color:#888">保養作業 · 進行中</div>
+            <div style="color:#4caf50;margin-top:3px;cursor:pointer">→ 開啟工單</div>
+          </div>
+          <div style="background:#0d2137;border-radius:4px;padding:7px;font-size:0.72em">
+            <div style="color:#fff;font-weight:bold">WO-2026-0415</div>
+            <div style="color:#888">換刀作業 · 已完成</div>
+            <div style="color:#4caf50;margin-top:3px;cursor:pointer">→ 開啟工單</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>新增模型：EquipmentLinkConfig</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+      <div><strong>EquipmentLinkConfig</strong> <span style="color:#888">— 設備資訊連結設定</span></div>
+      <div style="margin-left:1.5em;color:#4caf50">Id, EquipmentId</div>
+      <div style="margin-left:1.5em;color:#4caf50">LinkType(Enum): WorkOrder, AlarmHistory, Document, CustomUrl</div>
+      <div style="margin-left:1.5em;color:#4caf50">TabLabel　← 頁籤顯示名稱（如「工單」）</div>
+      <div style="margin-left:1.5em;color:#4caf50">UrlTemplate　← 連結 URL 樣板（可含 {equipmentId} 參數）</div>
+      <div style="margin-left:1.5em;color:#4caf50">DataSourceConfigId（nullable）← 可用資料源查詢顯示清單</div>
+      <div style="margin-left:1.5em;color:#4caf50">DisplayOrder</div>
+      <br>
+      <div><span style="color:#888">LinkType Enum 新增：</span></div>
+      <div style="margin-left:1.5em;color:#4caf50">WorkOrder, AlarmHistory, Document, CustomUrl</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>新增元件</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+      <div><strong>EquipmentTooltip.razor</strong>　<span style="color:#888">← Hover 快覽</span></div>
+      <div style="margin-left:1.5em;color:#aaa">設備名稱、狀態、最近警報摘要</div>
+      <div style="margin-left:1.5em;color:#aaa">mouseover / mouseout 觸發顯示/隱藏</div>
+      <div style="margin-top:0.5em"><strong>EquipmentDetailDrawer.razor</strong>　<span style="color:#888">← Click 詳細面板</span></div>
+      <div style="margin-left:1.5em;color:#aaa">側欄 Drawer，依 EquipmentLinkConfig 動態產生頁籤</div>
+      <div style="margin-left:1.5em;color:#aaa">每個頁籤可顯示：清單資料（工單）、文字說明（警報原因）、超連結</div>
+      <div style="margin-left:1.5em;color:#aaa">關閉按鈕或點擊地圖空白處收起</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>新增介面方法</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+      <div><strong>IEquipmentService</strong> 新增：</div>
+      <div style="margin-left:1.5em;color:#4caf50">Task&lt;IEnumerable&lt;EquipmentLinkConfig&gt;&gt; GetLinkConfigsAsync(equipmentId)</div>
+      <div style="margin-left:1.5em;color:#4caf50">Task SaveLinkConfigAsync(EquipmentLinkConfig config)</div>
+      <div style="margin-left:1.5em;color:#4caf50">Task DeleteLinkConfigAsync(id)</div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5em;color:#888;font-size:0.9em">✅ 設計第四節（更新版）。確認後在終端回覆，我將彙整並撰寫完整規格文件。</p>

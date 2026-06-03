@@ -1,3 +1,5 @@
+using TPS.Nexus.Core;
+using TPS.Nexus.Kanban.Core.Constants;
 using TPS.Nexus.Kanban.Core.Interfaces;
 
 namespace TPS.Nexus.Kanban.Services.Icon;
@@ -8,7 +10,7 @@ public class IconUploadService : IIconUploadService
 
     public IconUploadService(IWebHostEnvironmentAccessor envAccessor)
     {
-        _iconDir = Path.Combine(envAccessor.WebRootPath, "images", "equipment-icons");
+        _iconDir = Path.Combine(envAccessor.WebRootPath, KanbanAssets.IconsSubdir);
         Directory.CreateDirectory(_iconDir);
     }
 
@@ -31,7 +33,7 @@ public class IconUploadService : IIconUploadService
         await using var fs = File.Create(fullPath);
         await file.CopyToAsync(fs);
 
-        return $"/module-assets/TPS.Nexus.Kanban/images/equipment-icons/{savedName}";
+        return $"{KanbanAssets.ModulePrefix}/{KanbanAssets.IconsSubdir}/{savedName}";
     }
 
     public Task DeleteAsync(string filePath)

@@ -57,8 +57,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        CanEdit = await PermSvc.HasPermissionAsync("KANBAN_EDIT");
-        CanPublish = await PermSvc.HasPermissionAsync("KANBAN_PUBLISH");
+        CanEdit = await PermSvc.HasPermissionAsync(KanbanPermissions.Edit);
+        CanPublish = await PermSvc.HasPermissionAsync(KanbanPermissions.Publish);
     }
 
     private async Task ToggleEditMode()

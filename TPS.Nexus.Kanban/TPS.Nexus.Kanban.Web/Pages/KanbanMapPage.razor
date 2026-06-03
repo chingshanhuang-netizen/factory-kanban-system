@@ -10,7 +10,7 @@
 
 @if (!CanView)
 {
-    <div style="padding:40px;text-align:center;color:#f44336">無查看權限（需要 KANBAN_VIEW）</div>
+    <div style="padding:40px;text-align:center;color:#f44336">無查看權限（需要 @KanbanPermissions.View）</div>
     return;
 }
 
@@ -64,7 +64,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        CanView = await PermSvc.HasPermissionAsync("KANBAN_VIEW");
+        CanView = await PermSvc.HasPermissionAsync(KanbanPermissions.View);
         if (!CanView) return;
 
         var maps = await MapImportSvc.GetAllAsync();
@@ -73,7 +73,7 @@
         await ReloadAlarms();
 
         HubConn = new HubConnectionBuilder()
-            .WithUrl("/hubs/kanban-alarm")
+            .WithUrl(KanbanRoutes.AlarmHubPath)
             .Build();
 
         HubConn.On<int, string, string>("ReceiveAlarm", async (_, _, _) =>

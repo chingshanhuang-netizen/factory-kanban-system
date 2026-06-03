@@ -4,6 +4,7 @@
 @inject IAlarmService AlarmSvc
 @inject IMapImportService MapImportSvc
 @inject IFunctionPermissionService PermSvc
+@inject IOptions<KanbanModuleOptions> ModuleOpts
 @implements IAsyncDisposable
 
 @* W-6: guard non-positive MapId — route param parsing can produce 0 on unexpected input *@
@@ -103,7 +104,7 @@
 
     private async Task PollLoopAsync(CancellationToken ct)
     {
-        _pollTimer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+        _pollTimer = new PeriodicTimer(TimeSpan.FromSeconds(ModuleOpts.Value.MapPollIntervalSeconds));
         try
         {
             while (await _pollTimer.WaitForNextTickAsync(ct))

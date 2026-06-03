@@ -1,5 +1,6 @@
 @inject IDataSourceService DataSvc
 @inject IEquipmentService EquipmentSvc
+@inject IOptions<KanbanModuleOptions> ModuleOpts
 
 @if (Widget != null && EquipmentData != null)
 {
@@ -69,7 +70,7 @@
 
         var history = await DataSvc.FetchHistoryAsync(config, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow);
         int i = 0;
-        foreach (var row in history.TakeLast(10))
+        foreach (var row in history.TakeLast(ModuleOpts.Value.TooltipHistoryMaxRows))
         {
             var firstVal = row.Fields.Values.FirstOrDefault();
             if (firstVal != null && double.TryParse(firstVal.ToString(), out var v))

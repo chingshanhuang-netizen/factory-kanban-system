@@ -1,0 +1,75 @@
+<h2>架構方案選擇</h2>
+<p class="subtitle">請選擇最適合工廠看板系統的架構方案</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>單一 RCL 專案（Monolithic）</h3>
+      <p>所有功能（地圖、看板、資料源、服務）全部放在同一個 Razor Class Library 專案中。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>優點</h4><ul>
+          <li>部署簡單，只需一個 DLL</li>
+          <li>開發初期速度快</li>
+          <li>專案結構單純</li>
+        </ul></div>
+        <div class="cons"><h4>缺點</h4><ul>
+          <li>專案龐大後難以維護</li>
+          <li>各層耦合度高</li>
+          <li>單元測試困難</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>分層多專案解決方案（推薦）</h3>
+      <p>拆分為三個專案，嚴格對應 Controller-Service-View 架構：</p>
+      <div class="mockup">
+        <div class="mockup-header">專案結構</div>
+        <div class="mockup-body" style="font-family:monospace;font-size:0.85em;line-height:1.8">
+          <div>📦 <strong>TPS.Nexus.Kanban.Core</strong></div>
+          <div style="margin-left:1.5em;color:#888">Models、Interfaces、Enums、共用合約</div>
+          <div>📦 <strong>TPS.Nexus.Kanban.Services</strong></div>
+          <div style="margin-left:1.5em;color:#888">業務邏輯、資料源適配器（SQL/CSV/JSON/XML）</div>
+          <div style="margin-left:1.5em;color:#888">地圖解析器、版本管理、SignalR Hub</div>
+          <div>📦 <strong>TPS.Nexus.Kanban.Web</strong> <em>(RCL)</em></div>
+          <div style="margin-left:1.5em;color:#888">Razor 元件、拖拉佈局、看板 Widget、頁面</div>
+        </div>
+      </div>
+      <div class="pros-cons">
+        <div class="pros"><h4>優點</h4><ul>
+          <li>清晰邊界，符合 CSV 架構</li>
+          <li>Service 層可獨立單元測試</li>
+          <li>各層可獨立更新</li>
+        </ul></div>
+        <div class="cons"><h4>缺點</h4><ul>
+          <li>多個專案需管理</li>
+          <li>初期設定較多</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>微插件架構（Micro-plugin）</h3>
+      <p>核心看板模組 + 可插拔資料適配器 + 可插拔 Widget 類型，每種地圖格式、每種資料源各為獨立插件。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>優點</h4><ul>
+          <li>最大彈性與可擴展性</li>
+          <li>可單獨更新某一資料源適配器</li>
+          <li>未來新增格式無需改動核心</li>
+        </ul></div>
+        <div class="cons"><h4>缺點</h4><ul>
+          <li>架構複雜度高</li>
+          <li>對目前需求過度設計</li>
+          <li>開發週期較長</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>

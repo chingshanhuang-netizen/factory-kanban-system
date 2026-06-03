@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TPS.Nexus.Core;
+using TPS.Nexus.Kanban.Core.Constants;
 using TPS.Nexus.Kanban.Core.Interfaces;
+using TPS.Nexus.Kanban.Core.Options;
 using TPS.Nexus.Kanban.Services.Alarm;
 using TPS.Nexus.Kanban.Services.DataSource;
 using TPS.Nexus.Kanban.Services.Equipment;
@@ -25,10 +27,11 @@ public class KanbanModuleRegistrar : IModuleRegistrar
         services.AddScoped<IEquipmentService, EquipmentService>();
         services.AddScoped<IAlarmService, AlarmService>();
         services.AddScoped<IIconUploadService, IconUploadService>();
+        services.Configure<KanbanModuleOptions>(configuration.GetSection("KanbanModule"));
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapHub<KanbanAlarmHub>("/hubs/kanban-alarm");
+        endpoints.MapHub<KanbanAlarmHub>(KanbanRoutes.AlarmHubPath);
     }
 }

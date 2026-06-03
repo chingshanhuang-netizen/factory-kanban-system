@@ -1,4 +1,5 @@
 @inject IMapImportService MapImportSvc
+@inject IOptions<KanbanModuleOptions> ModuleOpts
 
 <RadzenCard Style="padding:16px">
     <RadzenText TextStyle="TextStyle.H6">匯入廠區地圖</RadzenText>
@@ -58,7 +59,7 @@
 
         try
         {
-            await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: ModuleOpts.Value.MapUploadMaxBytes);
             var map = await MapImportSvc.ImportAsync(stream, _selectedFile.Name, SelectedFormat);
             StatusMessage = $"✅ 已匯入：{map.Name}";
             await OnImported.InvokeAsync(map);

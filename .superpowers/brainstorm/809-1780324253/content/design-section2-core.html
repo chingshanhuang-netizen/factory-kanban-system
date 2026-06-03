@@ -1,0 +1,81 @@
+<h2>設計第二節：Core 層 — 模型與介面</h2>
+<p class="subtitle">TPS.Nexus.Kanban.Core 專案內容</p>
+
+<div class="section">
+  <h3>核心模型（Models）</h3>
+  <div class="mockup">
+    <div class="mockup-header">資料模型關係</div>
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+
+      <div><strong>FactoryMap</strong> <span style="color:#888">— 廠區地圖</span></div>
+      <div style="margin-left:1.5em;color:#aaa">Id, Name, FormatType(Enum), FilePath, ThumbnailPath, CreatedAt</div>
+
+      <div style="margin-top:0.5em"><strong>LayoutVersion</strong> <span style="color:#888">— 佈局版本</span></div>
+      <div style="margin-left:1.5em;color:#aaa">Id, FactoryMapId, VersionNo, Status(Draft/Published)</div>
+      <div style="margin-left:1.5em;color:#aaa">CreatedBy, PublishedAt, LayoutJson(序列化佈局)</div>
+
+      <div style="margin-top:0.5em"><strong>Equipment</strong> <span style="color:#888">— 設備</span></div>
+      <div style="margin-left:1.5em;color:#aaa">Id, Name, Tag, Description</div>
+      <div style="margin-left:1.5em;color:#aaa">PositionX, PositionY, Width, Height <span style="color:#666">（佈局座標）</span></div>
+
+      <div style="margin-top:0.5em"><strong>EquipmentWidget</strong> <span style="color:#888">— 設備看板設定</span></div>
+      <div style="margin-left:1.5em;color:#aaa">Id, EquipmentId, LayoutVersionId</div>
+      <div style="margin-left:1.5em;color:#aaa">Components: List&lt;WidgetComponent&gt;</div>
+
+      <div style="margin-top:0.5em"><strong>WidgetComponent</strong> <span style="color:#888">— 看板元件（可組合）</span></div>
+      <div style="margin-left:1.5em;color:#aaa">Id, ComponentType(Enum), DataSourceConfigId</div>
+      <div style="margin-left:1.5em;color:#aaa">Label, Unit, RefreshInterval(秒)</div>
+      <div style="margin-left:1.5em;color:#aaa">DisplayOrder, ConfigJson(元件個別設定)</div>
+
+      <div style="margin-top:0.5em"><strong>DataSourceConfig</strong> <span style="color:#888">— 資料來源設定</span></div>
+      <div style="margin-left:1.5em;color:#aaa">Id, Name, SourceType(Enum)</div>
+      <div style="margin-left:1.5em;color:#aaa">ConnectionString/FilePath, QueryOrPath, Parameters</div>
+
+      <div style="margin-top:0.5em"><strong>AlarmRule</strong> <span style="color:#888">— 警報規則</span></div>
+      <div style="margin-left:1.5em;color:#aaa">Id, EquipmentId, DataSourceConfigId</div>
+      <div style="margin-left:1.5em;color:#aaa">Condition, Threshold, AlarmLevel(Enum)</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>列舉型別（Enums）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+      <div><strong>MapFormatType</strong>: Png, Jpg, Svg, Dxf, JsonCoord, XmlCoord</div>
+      <div><strong>DataSourceType</strong>: Sql, Csv, Json, Xml</div>
+      <div><strong>WidgetComponentType</strong>: StatusIndicator, ValueGauge, TrendChart</div>
+      <div><strong>LayoutStatus</strong>: Draft, Published, Archived</div>
+      <div><strong>AlarmLevel</strong>: Info, Warning, Critical</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>服務介面（Interfaces）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+      <div><strong>IMapImportService</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">Task&lt;FactoryMap&gt; ImportAsync(Stream file, MapFormatType format)</div>
+
+      <div style="margin-top:0.4em"><strong>IDataSourceService</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">Task&lt;DataResult&gt; FetchAsync(DataSourceConfig config)</div>
+      <div style="margin-left:1.5em;color:#aaa">Task&lt;IEnumerable&lt;DataResult&gt;&gt; FetchHistoryAsync(config, from, to)</div>
+
+      <div style="margin-top:0.4em"><strong>ILayoutService</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">Task&lt;LayoutVersion&gt; SaveDraftAsync(layoutData)</div>
+      <div style="margin-left:1.5em;color:#aaa">Task&lt;LayoutVersion&gt; PublishAsync(draftId)</div>
+      <div style="margin-left:1.5em;color:#aaa">Task&lt;IEnumerable&lt;LayoutVersion&gt;&gt; GetVersionHistoryAsync(mapId)</div>
+      <div style="margin-left:1.5em;color:#aaa">Task RollbackAsync(versionId)</div>
+
+      <div style="margin-top:0.4em"><strong>IEquipmentService</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">CRUD for Equipment, EquipmentWidget, WidgetComponent</div>
+
+      <div style="margin-top:0.4em"><strong>IAlarmService</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">Task EvaluateAsync(equipmentId, latestData)</div>
+      <div style="margin-left:1.5em;color:#aaa">Task&lt;IEnumerable&lt;AlarmRecord&gt;&gt; GetActiveAlarmsAsync()</div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5em;color:#888;font-size:0.9em">✅ 設計第二節。請確認 Core 層模型與介面，然後在終端回覆繼續第三節（Service 層）。</p>

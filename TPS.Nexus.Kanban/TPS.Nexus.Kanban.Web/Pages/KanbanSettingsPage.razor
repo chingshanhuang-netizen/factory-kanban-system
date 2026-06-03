@@ -4,12 +4,13 @@
 @inject IFunctionPermissionService PermSvc
 @inject IMapImportService MapImportSvc
 @inject NotificationService NotifySvc
+@inject IOptions<KanbanModuleOptions> ModuleOpts
 
 <PageTitle>看板設定</PageTitle>
 
 @if (!CanSettings)
 {
-    <div style="padding:40px;text-align:center;color:#f44336">無設定權限（需要 KANBAN_SETTINGS）</div>
+    <div style="padding:40px;text-align:center;color:#f44336">無設定權限（需要 @KanbanPermissions.Settings）</div>
     return;
 }
 
@@ -140,7 +141,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        CanSettings = await PermSvc.HasPermissionAsync("KANBAN_SETTINGS");
+        CanSettings = await PermSvc.HasPermissionAsync(KanbanPermissions.Settings);
         if (!CanSettings) return;
         await LoadAll();
     }
@@ -214,7 +215,7 @@
         if (_iconFile == null) return;
         try
         {
-            await using var stream = _iconFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            await using var stream = _iconFile.OpenReadStream(maxAllowedSize: ModuleOpts.Value.IconUploadMaxBytes);
             IconUploadResult = await IconSvc.UploadAsync(stream, _iconFile.Name);
             NotifySvc.Notify(NotificationSeverity.Success, "圖示已上傳", IconUploadResult);
         }

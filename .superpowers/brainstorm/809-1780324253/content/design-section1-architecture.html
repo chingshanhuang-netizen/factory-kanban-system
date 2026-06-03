@@ -1,0 +1,64 @@
+<h2>設計第一節：整體架構與專案結構</h2>
+<p class="subtitle">三層專案分工與相依關係</p>
+
+<div class="section">
+  <h3>專案相依圖</h3>
+  <div class="mockup">
+    <div class="mockup-header">Solution 結構</div>
+    <div class="mockup-body" style="font-family:monospace;font-size:0.85em;line-height:2">
+      <div>🖥️ <strong>TPS.Nexus.Web.exe</strong> <span style="color:#888">（宿主，不修改）</span></div>
+      <div style="margin-left:1em">↓ 載入模組</div>
+      <div>📦 <strong>TPS.Nexus.Kanban.Web</strong> <span style="color:#4caf50">← Razor Class Library (.NET 10)</span></div>
+      <div style="margin-left:2em;color:#aaa">View 層：Razor 元件、頁面、靜態資源</div>
+      <div style="margin-left:2em">↓ 參考</div>
+      <div>📦 <strong>TPS.Nexus.Kanban.Services</strong> <span style="color:#2196f3">← Class Library (.NET 10)</span></div>
+      <div style="margin-left:2em;color:#aaa">Service 層：業務邏輯、資料適配器、SignalR Hub</div>
+      <div style="margin-left:2em">↓ 參考</div>
+      <div>📦 <strong>TPS.Nexus.Kanban.Core</strong> <span style="color:#ff9800">← Class Library (.NET 10)</span></div>
+      <div style="margin-left:2em;color:#aaa">Models、Interfaces、Enums、共用合約</div>
+      <div style="margin-left:2em">↓ 參考</div>
+      <div>📦 <strong>TPS.Nexus.Core.dll</strong> <span style="color:#888">（外部核心，IDbConnectionFactory 等）</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>模組註冊流程</h3>
+  <div class="mockup">
+    <div class="mockup-header">TPS.Nexus 模組啟動流程</div>
+    <div class="mockup-body" style="font-family:monospace;font-size:0.85em;line-height:1.8">
+      <div>1. TPS.Nexus.Web.exe 啟動</div>
+      <div>2. 掃描並載入 TPS.Nexus.Kanban.Web.dll</div>
+      <div>3. 執行 <strong>KanbanModuleRegistrar</strong> : IModuleRegistrar</div>
+      <div style="margin-left:1.5em">→ 註冊 Blazor 元件路由</div>
+      <div style="margin-left:1.5em">→ 註冊 Services DI（IMapImportService、ILayoutService 等）</div>
+      <div style="margin-left:1.5em">→ 掛載 SignalR Hub（/hubs/kanban-alarm）</div>
+      <div>4. 使用者瀏覽 /kanban → 顯示看板地圖頁面</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>資料流概覽</h3>
+  <div class="mockup">
+    <div class="mockup-header">執行期資料流</div>
+    <div class="mockup-body" style="font-family:monospace;font-size:0.85em;line-height:1.8">
+      <div><strong>一般數值（輪詢）：</strong></div>
+      <div>Timer 觸發 → DataSourceService.FetchAsync()</div>
+      <div style="margin-left:1.5em">→ SQL / CSV / JSON / XML 適配器</div>
+      <div style="margin-left:1.5em">→ 更新 Blazor 元件狀態 → 畫面重繪</div>
+      <br>
+      <div><strong>警報（即時推送）：</strong></div>
+      <div>資料源變動 → AlarmDetectionService</div>
+      <div style="margin-left:1.5em">→ KanbanAlarmHub.SendAlarmAsync()</div>
+      <div style="margin-left:1.5em">→ SignalR 推送 → 所有連線用戶端即時更新</div>
+      <br>
+      <div><strong>佈局版本管理：</strong></div>
+      <div>編輯模式拖拉 → LayoutService.SaveDraftAsync()</div>
+      <div style="margin-left:1.5em">→ 審核後 LayoutService.PublishAsync()</div>
+      <div style="margin-left:1.5em">→ 建立新版本，舊版本保留可回溯</div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5em;color:#888;font-size:0.9em">✅ 這是設計第一節。請確認整體架構方向，然後在終端回覆繼續下一節。</p>

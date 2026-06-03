@@ -1,0 +1,154 @@
+<h2>設備看板元件互動設計（更新）</h2>
+<p class="subtitle">底層：廠區樓層圖 ＋ 上層：設備看板元件疊層</p>
+
+<div class="section">
+  <h3>圖層架構</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="background:#1a3d5c;border:1px solid #2196f3;border-radius:4px;padding:6px 12px;display:flex;justify-content:space-between">
+          <span style="color:#2196f3">③ 互動層（最上層）</span>
+          <span style="color:#888;font-size:0.85em">Tooltip、Drawer、拖拉操作、右鍵選單</span>
+        </div>
+        <div style="text-align:center;color:#555;font-size:0.8em">↑ position:absolute / z-index:30</div>
+        <div style="background:#1a3d20;border:1px solid #4caf50;border-radius:4px;padding:6px 12px;display:flex;justify-content:space-between">
+          <span style="color:#4caf50">② 設備層（中層）</span>
+          <span style="color:#888;font-size:0.85em">EquipmentWidgetPanel × N（圖示+名稱+狀態燈）</span>
+        </div>
+        <div style="text-align:center;color:#555;font-size:0.8em">↑ position:absolute / z-index:20</div>
+        <div style="background:#3d2020;border:1px solid #ff9800;border-radius:4px;padding:6px 12px;display:flex;justify-content:space-between">
+          <span style="color:#ff9800">① 地圖層（底層）</span>
+          <span style="color:#888;font-size:0.85em">匯入的廠區樓層圖（PNG/JPG/SVG/DXF）</span>
+        </div>
+        <div style="text-align:center;color:#555;font-size:0.8em">↑ position:relative（容器基準）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>實際畫面示意（含廠區樓層圖底圖）</h3>
+  <div class="mockup">
+    <div class="mockup-header">KanbanMapPage — FactoryMapCanvas</div>
+    <div class="mockup-body" style="padding:0">
+      <!-- Toolbar -->
+      <div style="background:#0d1b2a;border-bottom:1px solid #1a3a5c;padding:5px 12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="color:#aaa;font-size:0.75em">🗺️ <strong style="color:#fff">A 廠一樓</strong> &nbsp;·&nbsp; v3 已發布</span>
+        <span>
+          <button style="background:#1a3a5c;color:#aaa;border:1px solid #2a4a6c;border-radius:3px;padding:2px 8px;font-size:0.72em;cursor:pointer">✏️ 編輯</button>
+          <button style="background:#1a3a5c;color:#aaa;border:1px solid #2a4a6c;border-radius:3px;padding:2px 8px;font-size:0.72em;cursor:pointer;margin-left:4px">📋 版本</button>
+        </span>
+      </div>
+      <!-- Map Canvas -->
+      <div style="position:relative;height:380px;overflow:hidden;background:#1a1a2e">
+
+        <!-- ① 底層：廠區樓層圖 (SVG 模擬) -->
+        <svg width="100%" height="100%" style="position:absolute;inset:0;opacity:0.55" xmlns="http://www.w3.org/2000/svg">
+          <!-- 廠房外牆 -->
+          <rect x="30" y="20" width="680" height="330" fill="none" stroke="#4a6a8a" stroke-width="2.5"/>
+          <!-- 內部隔間 -->
+          <line x1="30" y1="175" x2="710" y2="175" stroke="#3a5a7a" stroke-width="1.5" stroke-dasharray="6,3"/>
+          <line x1="260" y1="20" x2="260" y2="350" stroke="#3a5a7a" stroke-width="1.5" stroke-dasharray="6,3"/>
+          <line x1="480" y1="20" x2="480" y2="350" stroke="#3a5a7a" stroke-width="1.5" stroke-dasharray="6,3"/>
+          <!-- 門口 -->
+          <rect x="110" y="348" width="50" height="4" fill="#5a8aaa"/>
+          <rect x="580" y="348" width="50" height="4" fill="#5a8aaa"/>
+          <!-- 區域標籤 -->
+          <text x="130" y="45" fill="#3a6a9a" font-size="11" font-family="monospace">A 區 — 機械加工</text>
+          <text x="340" y="45" fill="#3a6a9a" font-size="11" font-family="monospace">B 區 — 組裝</text>
+          <text x="540" y="45" fill="#3a6a9a" font-size="11" font-family="monospace">C 區 — 測試</text>
+          <text x="130" y="200" fill="#3a6a9a" font-size="11" font-family="monospace">D 區 — 倉儲</text>
+          <text x="340" y="200" fill="#3a6a9a" font-size="11" font-family="monospace">E 區 — 品管</text>
+          <text x="540" y="200" fill="#3a6a9a" font-size="11" font-family="monospace">F 區 — 包裝</text>
+          <!-- 走道 -->
+          <rect x="240" y="150" width="40" height="50" fill="#253545" opacity="0.5"/>
+          <rect x="460" y="150" width="40" height="50" fill="#253545" opacity="0.5"/>
+        </svg>
+
+        <!-- ② 設備層：EquipmentWidgetPanel × 6 -->
+        <!-- CNC-01 (運行中) -->
+        <div style="position:absolute;top:65px;left:95px;background:rgba(15,52,96,0.92);border:1px solid #1a4a8a;border-radius:7px;padding:7px 9px;text-align:center;width:72px;cursor:pointer;backdrop-filter:blur(4px)">
+          <div style="font-size:1.6em">⚙️</div>
+          <div style="color:#fff;font-size:0.68em;margin:3px 0">CNC-01</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px">
+            <div style="width:8px;height:8px;background:#4caf50;border-radius:50%;box-shadow:0 0 4px #4caf50"></div>
+            <span style="color:#4caf50;font-size:0.6em">運行</span>
+          </div>
+        </div>
+
+        <!-- CNC-02 (停機) -->
+        <div style="position:absolute;top:95px;left:185px;background:rgba(15,52,96,0.92);border:1px solid #1a4a8a;border-radius:7px;padding:7px 9px;text-align:center;width:72px;cursor:pointer;backdrop-filter:blur(4px)">
+          <div style="font-size:1.6em">⚙️</div>
+          <div style="color:#fff;font-size:0.68em;margin:3px 0">CNC-02</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px">
+            <div style="width:8px;height:8px;background:#607d8b;border-radius:50%"></div>
+            <span style="color:#607d8b;font-size:0.6em">停機</span>
+          </div>
+        </div>
+
+        <!-- LINE-01 (運行中) -->
+        <div style="position:absolute;top:70px;left:320px;background:rgba(15,52,96,0.92);border:1px solid #1a4a8a;border-radius:7px;padding:7px 9px;text-align:center;width:72px;cursor:pointer;backdrop-filter:blur(4px)">
+          <div style="font-size:1.6em">🏭</div>
+          <div style="color:#fff;font-size:0.68em;margin:3px 0">LINE-01</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px">
+            <div style="width:8px;height:8px;background:#4caf50;border-radius:50%;box-shadow:0 0 4px #4caf50"></div>
+            <span style="color:#4caf50;font-size:0.6em">運行</span>
+          </div>
+        </div>
+
+        <!-- PUMP-03 (警報) -->
+        <div style="position:absolute;top:80px;left:530px;background:rgba(61,0,0,0.92);border:1px solid #7f0000;border-radius:7px;padding:7px 9px;text-align:center;width:72px;cursor:pointer;box-shadow:0 0 10px rgba(244,67,54,0.4);backdrop-filter:blur(4px)">
+          <div style="font-size:1.6em">🔧</div>
+          <div style="color:#fff;font-size:0.68em;margin:3px 0">PUMP-03</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px">
+            <div style="width:8px;height:8px;background:#f44336;border-radius:50%;box-shadow:0 0 6px #f44336"></div>
+            <span style="color:#f44336;font-size:0.6em">⚠ 警報</span>
+          </div>
+        </div>
+
+        <!-- ROBOT-01 (運行中) -->
+        <div style="position:absolute;top:235px;left:145px;background:rgba(15,52,96,0.92);border:1px solid #1a4a8a;border-radius:7px;padding:7px 9px;text-align:center;width:72px;cursor:pointer;backdrop-filter:blur(4px)">
+          <div style="font-size:1.6em">🤖</div>
+          <div style="color:#fff;font-size:0.68em;margin:3px 0">ROBOT-01</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px">
+            <div style="width:8px;height:8px;background:#4caf50;border-radius:50%;box-shadow:0 0 4px #4caf50"></div>
+            <span style="color:#4caf50;font-size:0.6em">運行</span>
+          </div>
+        </div>
+
+        <!-- CONV-02 (待機) -->
+        <div style="position:absolute;top:240px;left:390px;background:rgba(40,25,0,0.92);border:1px solid #7a5000;border-radius:7px;padding:7px 9px;text-align:center;width:72px;cursor:pointer;backdrop-filter:blur(4px)">
+          <div style="font-size:1.6em">🔩</div>
+          <div style="color:#fff;font-size:0.68em;margin:3px 0">CONV-02</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px">
+            <div style="width:8px;height:8px;background:#ff9800;border-radius:50%;box-shadow:0 0 4px #ff9800"></div>
+            <span style="color:#ff9800;font-size:0.6em">待機</span>
+          </div>
+        </div>
+
+        <!-- 圖層說明標籤 -->
+        <div style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.6);border-radius:4px;padding:3px 8px;font-size:0.65em;color:#888">
+          底層：廠區樓層圖（SVG）　|　上層：設備看板元件
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>FactoryMapCanvas 實作說明</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.8">
+      <div><strong>FactoryMapCanvas.razor</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">&lt;div style="position:relative"&gt; ← 座標基準容器</div>
+      <div style="margin-left:3em;color:#ff9800">① &lt;MapLayer /&gt; ← 底層：廠區樓層圖</div>
+      <div style="margin-left:4.5em;color:#666">PNG/JPG → &lt;img&gt;；SVG → inline &lt;svg&gt;；DXF → 轉換後的 &lt;svg&gt;</div>
+      <div style="margin-left:3em;color:#4caf50">② @foreach equipment → &lt;EquipmentWidgetPanel /&gt; ← 設備層</div>
+      <div style="margin-left:4.5em;color:#666">style="position:absolute; left:{X}px; top:{Y}px"</div>
+      <div style="margin-left:3em;color:#2196f3">③ &lt;EquipmentTooltip /&gt; + &lt;EquipmentDetailDrawer /&gt; ← 互動層</div>
+      <div style="margin-left:1.5em;color:#aaa">&lt;/div&gt;</div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5em;color:#888;font-size:0.9em">✅ 完整圖層設計確認。回覆後撰寫完整規格文件。</p>

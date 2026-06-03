@@ -1,0 +1,99 @@
+<h2>設計第三節：Service 層</h2>
+<p class="subtitle">TPS.Nexus.Kanban.Services 專案內容</p>
+
+<div class="section">
+  <h3>服務分組總覽</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+      <div>Services/</div>
+      <div style="margin-left:1.5em">Map/　　　<span style="color:#888">← 地圖匯入與解析</span></div>
+      <div style="margin-left:1.5em">DataSource/　<span style="color:#888">← 資料來源適配器</span></div>
+      <div style="margin-left:1.5em">Layout/　　<span style="color:#888">← 版本草稿/發布</span></div>
+      <div style="margin-left:1.5em">Equipment/　<span style="color:#888">← 設備與看板管理</span></div>
+      <div style="margin-left:1.5em">Alarm/　　<span style="color:#888">← 警報偵測與推送</span></div>
+      <div style="margin-left:1.5em">Icon/　　　<span style="color:#888">← 圖示上傳管理</span></div>
+      <div style="margin-left:1.5em">Hubs/　　　<span style="color:#888">← SignalR Hub</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>地圖匯入（Map/）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.8">
+      <div><strong>MapImportService</strong> : IMapImportService</div>
+      <div style="margin-left:1.5em;color:#aaa">依 MapFormatType 路由至對應 Parser</div>
+      <div style="margin-top:0.5em"><strong>ImageMapHandler</strong>　<span style="color:#888">← PNG / JPG</span></div>
+      <div style="margin-left:1.5em;color:#aaa">儲存原始圖檔，產生縮圖</div>
+      <div style="margin-top:0.3em"><strong>SvgMapParser</strong>　　<span style="color:#888">← SVG</span></div>
+      <div style="margin-left:1.5em;color:#aaa">解析 SVG 結構，萃取可互動圖層</div>
+      <div style="margin-top:0.3em"><strong>DxfMapParser</strong>　　<span style="color:#888">← DXF / CAD</span></div>
+      <div style="margin-left:1.5em;color:#aaa">使用 netDxf 函式庫轉換為 SVG</div>
+      <div style="margin-top:0.3em"><strong>JsonXmlCoordParser</strong>　<span style="color:#888">← JSON / XML 座標定義</span></div>
+      <div style="margin-left:1.5em;color:#aaa">解析設備位置座標，建立 FactoryMap 物件</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>資料來源適配器（DataSource/）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.8">
+      <div><strong>DataSourceService</strong> : IDataSourceService</div>
+      <div style="margin-left:1.5em;color:#aaa">依 DataSourceType 路由，統一回傳 DataResult</div>
+      <div style="margin-top:0.5em"><strong>SqlDataAdapter</strong>　<span style="color:#888">← 使用 IDbConnectionFactory</span></div>
+      <div style="margin-left:1.5em;color:#aaa">執行 SQL 查詢，支援參數化查詢防 Injection</div>
+      <div style="margin-top:0.3em"><strong>CsvDataAdapter</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">使用 CsvHelper 解析，支援自訂分隔符</div>
+      <div style="margin-top:0.3em"><strong>JsonDataAdapter</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">System.Text.Json 解析，支援 JSONPath 取值</div>
+      <div style="margin-top:0.3em"><strong>XmlDataAdapter</strong></div>
+      <div style="margin-left:1.5em;color:#aaa">System.Xml 解析，支援 XPath 取值</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>佈局版本管理（Layout/）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.8">
+      <div><strong>LayoutService</strong> : ILayoutService</div>
+      <div style="margin-left:1.5em;color:#aaa">SaveDraftAsync　→ 儲存草稿（Status = Draft）</div>
+      <div style="margin-left:1.5em;color:#aaa">PublishAsync　　→ 草稿升版（Status = Published），舊版本 → Archived</div>
+      <div style="margin-left:1.5em;color:#aaa">GetVersionHistoryAsync → 取得所有版本清單</div>
+      <div style="margin-left:1.5em;color:#aaa">RollbackAsync　→ 將指定版本重新 Published</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>警報偵測與推送（Alarm/ + Hubs/）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.8">
+      <div><strong>AlarmService</strong> : IAlarmService</div>
+      <div style="margin-left:1.5em;color:#aaa">EvaluateAsync　→ 比對 AlarmRule 條件，觸發時呼叫 Hub</div>
+      <div style="margin-left:1.5em;color:#aaa">GetActiveAlarmsAsync → 取得目前未解除警報清單</div>
+      <div style="margin-top:0.5em"><strong>KanbanAlarmHub</strong> : Hub <span style="color:#888">← SignalR</span></div>
+      <div style="margin-left:1.5em;color:#aaa">SendAlarmAsync(equipmentId, alarmLevel, message)</div>
+      <div style="margin-left:1.5em;color:#aaa">客戶端監聽 "ReceiveAlarm" 事件即時更新畫面</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>模組註冊（KanbanModuleRegistrar）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.8">
+      <div><strong>KanbanModuleRegistrar</strong> : IModuleRegistrar</div>
+      <div style="margin-left:1.5em;color:#aaa">Register(IServiceCollection services)</div>
+      <div style="margin-left:2.5em;color:#666">services.AddScoped&lt;IMapImportService, MapImportService&gt;()</div>
+      <div style="margin-left:2.5em;color:#666">services.AddScoped&lt;IDataSourceService, DataSourceService&gt;()</div>
+      <div style="margin-left:2.5em;color:#666">services.AddScoped&lt;ILayoutService, LayoutService&gt;()</div>
+      <div style="margin-left:2.5em;color:#666">services.AddScoped&lt;IAlarmService, AlarmService&gt;()</div>
+      <div style="margin-left:2.5em;color:#666">services.AddScoped&lt;IIconUploadService, IconUploadService&gt;()</div>
+      <div style="margin-left:2.5em;color:#666">services.AddSignalR() → KanbanAlarmHub</div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5em;color:#888;font-size:0.9em">✅ 設計第三節。確認後在終端回覆繼續第四節（View 層 Razor 元件）。</p>

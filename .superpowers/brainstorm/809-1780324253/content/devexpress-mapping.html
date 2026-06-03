@@ -1,0 +1,137 @@
+<h2>DevExpress Blazor 元件對應建議</h2>
+<p class="subtitle">以 DevExpress 取代或強化的元件清單</p>
+
+<div class="section">
+  <h3>核心儀表板元件（效益最高）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:2">
+      <div style="display:grid;grid-template-columns:1fr 0.3fr 1fr;gap:0.5em;align-items:center">
+        <div style="color:#aaa">自訂 TrendChart.razor（Chart.js）</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxChart</strong> <span style="color:#888">折線/柱狀/面積圖，內建縮放、Tooltip</span></div>
+
+        <div style="color:#aaa">自訂 ValueGauge.razor（純文字）</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxCircularGauge / DxLinearGauge</strong> <span style="color:#888">視覺化儀表盤</span></div>
+
+        <div style="color:#aaa">自訂 AlarmToast.razor</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxNotification / DxToast</strong> <span style="color:#888">內建動畫通知</span></div>
+
+        <div style="color:#aaa">自訂 EquipmentDetailDrawer.razor</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxFlyout / DxPopup</strong> <span style="color:#888">動畫側欄面板</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>資料管理元件</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:2">
+      <div style="display:grid;grid-template-columns:1fr 0.3fr 1fr;gap:0.5em;align-items:center">
+        <div style="color:#aaa">自訂工單/警報清單</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxGrid</strong> <span style="color:#888">排序、篩選、分頁、虛擬捲動</span></div>
+
+        <div style="color:#aaa">版本記錄清單</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxGrid</strong> <span style="color:#888">含行內操作（發布/回溯）</span></div>
+
+        <div style="color:#aaa">地圖 / 圖示上傳</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxUpload</strong> <span style="color:#888">拖放上傳、進度條、格式驗證</span></div>
+
+        <div style="color:#aaa">資料來源設定表單</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxFormLayout + DxTextBox</strong> <span style="color:#888">統一表單樣式</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>互動操作元件</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:2">
+      <div style="display:grid;grid-template-columns:1fr 0.3fr 1fr;gap:0.5em;align-items:center">
+        <div style="color:#aaa">自訂 MapEditorToolbar.razor</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxToolbar</strong> <span style="color:#888">群組按鈕、分隔線、下拉選單</span></div>
+
+        <div style="color:#aaa">Drawer 頁籤</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxTabs</strong> <span style="color:#888">動態頁籤，可捲動</span></div>
+
+        <div style="color:#aaa">設備右鍵選單</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxContextMenu</strong> <span style="color:#888">右鍵：編輯設定、刪除、查看詳情</span></div>
+
+        <div style="color:#aaa">WidgetConfigurator 元件選擇</div>
+        <div style="color:#4caf50;text-align:center">→</div>
+        <div><strong style="color:#fff">DxAccordion / DxListBox</strong> <span style="color:#888">可展開的元件設定面板</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>WidgetPanel 視覺效果升級示意</h3>
+  <div class="mockup">
+    <div class="mockup-header">使用 DevExpress 後的設備看板元件</div>
+    <div class="mockup-body" style="display:flex;gap:12px;flex-wrap:wrap;padding:1em">
+      <!-- Status Widget -->
+      <div style="background:#0f3460;border-radius:8px;padding:10px;width:140px;border:1px solid #1a4a8a">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <span>⚙️</span><span style="color:#fff;font-size:0.8em;font-weight:bold">CNC-01</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <div style="width:12px;height:12px;background:#4caf50;border-radius:50%;box-shadow:0 0 6px #4caf50"></div>
+          <span style="color:#4caf50;font-size:0.75em">運行中</span>
+        </div>
+        <!-- DxLinearGauge mockup -->
+        <div style="margin-bottom:4px">
+          <div style="color:#888;font-size:0.65em">轉速</div>
+          <div style="background:#0d2137;border-radius:3px;height:6px;margin:2px 0">
+            <div style="background:#2196f3;width:72%;height:100%;border-radius:3px"></div>
+          </div>
+          <div style="color:#fff;font-size:0.7em;text-align:right">1,200 RPM</div>
+        </div>
+        <div>
+          <div style="color:#888;font-size:0.65em">溫度</div>
+          <div style="background:#0d2137;border-radius:3px;height:6px;margin:2px 0">
+            <div style="background:#ff9800;width:55%;height:100%;border-radius:3px"></div>
+          </div>
+          <div style="color:#fff;font-size:0.7em;text-align:right">68.3 °C</div>
+        </div>
+        <!-- DxSparkline mockup -->
+        <svg width="120" height="30" style="margin-top:6px">
+          <polyline points="0,25 20,20 40,22 60,15 80,18 100,10 120,12" fill="none" stroke="#2196f3" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <!-- Alarm Widget -->
+      <div style="background:#1a0a0a;border-radius:8px;padding:10px;width:140px;border:1px solid #7f0000;box-shadow:0 0 10px rgba(244,67,54,0.3)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <span>🔧</span><span style="color:#fff;font-size:0.8em;font-weight:bold">PUMP-03</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <div style="width:12px;height:12px;background:#f44336;border-radius:50%;box-shadow:0 0 6px #f44336;animation:pulse 1s infinite"></div>
+          <span style="color:#f44336;font-size:0.75em">⚠ 警報</span>
+        </div>
+        <div>
+          <div style="color:#888;font-size:0.65em">壓力</div>
+          <div style="background:#0d0000;border-radius:3px;height:6px;margin:2px 0">
+            <div style="background:#f44336;width:92%;height:100%;border-radius:3px"></div>
+          </div>
+          <div style="color:#f44336;font-size:0.7em;text-align:right">12.8 bar ↑</div>
+        </div>
+        <svg width="120" height="30" style="margin-top:6px">
+          <polyline points="0,15 20,14 40,13 60,10 80,8 100,5 120,3" fill="none" stroke="#f44336" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5em;color:#888;font-size:0.9em">✅ DevExpress 元件對應完整。確認後在終端回覆，我將彙整所有設計撰寫規格文件。</p>

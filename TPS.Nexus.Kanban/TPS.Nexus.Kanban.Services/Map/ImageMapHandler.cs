@@ -1,3 +1,4 @@
+using TPS.Nexus.Kanban.Core.Constants;
 using TPS.Nexus.Kanban.Core.Enums;
 using TPS.Nexus.Kanban.Core.Models;
 
@@ -11,7 +12,7 @@ public class ImageMapHandler
 
     public async Task<FactoryMap> HandleAsync(Stream file, string fileName, MapFormatType format)
     {
-        var dir = Path.Combine(_storageRoot, "maps");
+        var dir = Path.Combine(_storageRoot, KanbanAssets.MapsSubdir);
         Directory.CreateDirectory(dir);
         var ext = format == MapFormatType.Png ? ".png" : ".jpg";
         var savedName = $"{Guid.NewGuid()}{ext}";
@@ -22,7 +23,7 @@ public class ImageMapHandler
 
         return new FactoryMap
         {
-            FilePath = $"/module-assets/TPS.Nexus.Kanban/maps/{savedName}",
+            FilePath = $"{KanbanAssets.ModulePrefix}/{KanbanAssets.MapsSubdir}/{savedName}",
             FormatType = format,
             CreatedAt = DateTime.UtcNow
         };

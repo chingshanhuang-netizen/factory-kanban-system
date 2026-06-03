@@ -1,0 +1,204 @@
+<h2>Blazor UI 元件庫三方比較</h2>
+<p class="subtitle">MudBlazor vs Radzen vs DevExpress Blazor — 工廠看板系統評估</p>
+
+<div class="section">
+  <h3>基本資訊</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:0.8em">
+        <thead>
+          <tr style="border-bottom:2px solid #1a3a5c">
+            <th style="text-align:left;padding:8px 12px;color:#888;width:22%">項目</th>
+            <th style="text-align:center;padding:8px 12px;color:#4caf50;width:26%">MudBlazor</th>
+            <th style="text-align:center;padding:8px 12px;color:#2196f3;width:26%">Radzen Blazor</th>
+            <th style="text-align:center;padding:8px 12px;color:#ff9800;width:26%">DevExpress Blazor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #1a2a3a">
+            <td style="padding:8px 12px;color:#aaa">授權費用</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50;font-weight:bold">完全免費（MIT）</td>
+            <td style="text-align:center;padding:8px 12px;color:#2196f3">免費社群版<br><span style="font-size:0.85em;color:#888">企業版 $299/年</span></td>
+            <td style="text-align:center;padding:8px 12px;color:#ff9800">付費授權<br><span style="font-size:0.85em;color:#888">約 $1,299+/年</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a;background:#0d1b2a">
+            <td style="padding:8px 12px;color:#aaa">設計風格</td>
+            <td style="text-align:center;padding:8px 12px;color:#aaa">Material Design<br><span style="font-size:0.85em;color:#666">偏消費性應用</span></td>
+            <td style="text-align:center;padding:8px 12px;color:#aaa">現代扁平企業風<br><span style="font-size:0.85em;color:#666">適合管理系統</span></td>
+            <td style="text-align:center;padding:8px 12px;color:#aaa">專業企業級<br><span style="font-size:0.85em;color:#666">高度可客製</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a">
+            <td style="padding:8px 12px;color:#aaa">GitHub Stars</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">⭐ 8,900+</td>
+            <td style="text-align:center;padding:8px 12px;color:#2196f3">⭐ 3,200+</td>
+            <td style="text-align:center;padding:8px 12px;color:#ff9800">閉源（無公開）</td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a;background:#0d1b2a">
+            <td style="padding:8px 12px;color:#aaa">社群活躍度</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">🔥 非常活躍</td>
+            <td style="text-align:center;padding:8px 12px;color:#2196f3">✅ 活躍</td>
+            <td style="text-align:center;padding:8px 12px;color:#ff9800">🏢 官方支援</td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a">
+            <td style="padding:8px 12px;color:#aaa">文件品質</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ 豐富範例</td>
+            <td style="text-align:center;padding:8px 12px;color:#2196f3">✅ 豐富範例</td>
+            <td style="text-align:center;padding:8px 12px;color:#ff9800">✅ 完整專業</td>
+          </tr>
+          <tr style="background:#0d1b2a">
+            <td style="padding:8px 12px;color:#aaa">學習曲線</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">低</td>
+            <td style="text-align:center;padding:8px 12px;color:#2196f3">低～中</td>
+            <td style="text-align:center;padding:8px 12px;color:#ff9800">中～高</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>看板系統關鍵元件支援</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:0.8em">
+        <thead>
+          <tr style="border-bottom:2px solid #1a3a5c">
+            <th style="text-align:left;padding:8px 12px;color:#888;width:22%">看板功能</th>
+            <th style="text-align:center;padding:8px 12px;color:#4caf50;width:26%">MudBlazor</th>
+            <th style="text-align:center;padding:8px 12px;color:#2196f3;width:26%">Radzen</th>
+            <th style="text-align:center;padding:8px 12px;color:#ff9800;width:26%">DevExpress</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #1a2a3a">
+            <td style="padding:8px 12px;color:#aaa">趨勢圖表</td>
+            <td style="text-align:center;padding:8px 12px;color:#f44336">❌ 無內建<br><span style="font-size:0.8em;color:#666">需加 ApexCharts</span></td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ RadzenChart<br><span style="font-size:0.8em;color:#666">折線/柱狀/圓餅</span></td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ DxChart<br><span style="font-size:0.8em;color:#666">最豐富，含即時串流</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a;background:#0d1b2a">
+            <td style="padding:8px 12px;color:#aaa">數值儀表盤</td>
+            <td style="text-align:center;padding:8px 12px;color:#f44336">❌ 無<br><span style="font-size:0.8em;color:#666">需自訂</span></td>
+            <td style="text-align:center;padding:8px 12px;color:#ff9800">⚠️ 有限<br><span style="font-size:0.8em;color:#666">RadzenArcGauge</span></td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ DxCircularGauge<br>DxLinearGauge</td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a">
+            <td style="padding:8px 12px;color:#aaa">迷你趨勢圖<br>(Sparkline)</td>
+            <td style="text-align:center;padding:8px 12px;color:#f44336">❌ 無</td>
+            <td style="text-align:center;padding:8px 12px;color:#ff9800">⚠️ 有限</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ DxSparkline</td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a;background:#0d1b2a">
+            <td style="padding:8px 12px;color:#aaa">Hover Tooltip</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ MudTooltip</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ RadzenTooltip</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ DxTooltip</td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a">
+            <td style="padding:8px 12px;color:#aaa">側欄 Drawer</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ MudDrawer</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ RadzenSidebar</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ DxFlyout</td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a;background:#0d1b2a">
+            <td style="padding:8px 12px;color:#aaa">資料表格</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ MudDataGrid</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ RadzenDataGrid</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ DxGrid<br><span style="font-size:0.8em;color:#666">功能最完整</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a">
+            <td style="padding:8px 12px;color:#aaa">警報通知</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ MudSnackbar</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ RadzenNotification</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ DxNotification</td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a;background:#0d1b2a">
+            <td style="padding:8px 12px;color:#aaa">檔案上傳</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ MudFileUpload</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ RadzenUpload</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ DxUpload</td>
+          </tr>
+          <tr style="border-bottom:1px solid #1a2a3a">
+            <td style="padding:8px 12px;color:#aaa">拖拉放置<br>(Drag & Drop)</td>
+            <td style="text-align:center;padding:8px 12px;color:#f44336">❌ 無內建<br><span style="font-size:0.8em;color:#666">需搭配 JS 套件</span></td>
+            <td style="text-align:center;padding:8px 12px;color:#f44336">❌ 無內建<br><span style="font-size:0.8em;color:#666">需搭配 JS 套件</span></td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ 原生支援</td>
+          </tr>
+          <tr style="background:#0d1b2a">
+            <td style="padding:8px 12px;color:#aaa">右鍵選單</td>
+            <td style="text-align:center;padding:8px 12px;color:#ff9800">⚠️ 需自訂</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ RadzenContextMenu</td>
+            <td style="text-align:center;padding:8px 12px;color:#4caf50">✅ DxContextMenu</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>整體評分（針對工廠看板系統）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="padding:1.2em">
+      <!-- MudBlazor -->
+      <div style="margin-bottom:1.2em">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="color:#4caf50;font-weight:bold">MudBlazor</span>
+          <span style="color:#4caf50;font-size:0.85em">6.5 / 10</span>
+        </div>
+        <div style="background:#0d2137;border-radius:4px;height:10px">
+          <div style="background:#4caf50;width:65%;height:100%;border-radius:4px"></div>
+        </div>
+        <div style="color:#888;font-size:0.75em;margin-top:5px">✅ 完全免費、社群最大 &nbsp;|&nbsp; ❌ 無內建圖表、無 Gauge、無拖拉 → 需額外套件補足</div>
+      </div>
+      <!-- Radzen -->
+      <div style="margin-bottom:1.2em">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="color:#2196f3;font-weight:bold">Radzen Blazor</span>
+          <span style="color:#2196f3;font-size:0.85em">7.5 / 10</span>
+        </div>
+        <div style="background:#0d2137;border-radius:4px;height:10px">
+          <div style="background:#2196f3;width:75%;height:100%;border-radius:4px"></div>
+        </div>
+        <div style="color:#888;font-size:0.75em;margin-top:5px">✅ 免費、有圖表、企業風格 &nbsp;|&nbsp; ❌ 無拖拉、Gauge 有限、Sparkline 不完整</div>
+      </div>
+      <!-- DevExpress -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="color:#ff9800;font-weight:bold">DevExpress Blazor</span>
+          <span style="color:#ff9800;font-size:0.85em">9.0 / 10</span>
+        </div>
+        <div style="background:#0d2137;border-radius:4px;height:10px">
+          <div style="background:#ff9800;width:90%;height:100%;border-radius:4px"></div>
+        </div>
+        <div style="color:#888;font-size:0.75em;margin-top:5px">✅ 元件最完整、原生拖拉、Gauge、Sparkline &nbsp;|&nbsp; ❌ 授權費用高</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>替換建議</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-size:0.82em;line-height:1.9">
+      <div style="margin-bottom:0.8em">
+        <span style="color:#2196f3;font-weight:bold">預算有限 → 選 Radzen</span>
+        <div style="margin-left:1.5em;color:#aaa">內建圖表是關鍵優勢，企業風格適合工廠系統</div>
+        <div style="margin-left:1.5em;color:#aaa">拖拉需補 <strong>SortableJS</strong>（免費 JS 套件）</div>
+      </div>
+      <div style="margin-bottom:0.8em">
+        <span style="color:#4caf50;font-weight:bold">純追求免費 → 選 MudBlazor + ApexCharts</span>
+        <div style="margin-left:1.5em;color:#aaa">MudBlazor 負責 UI 框架，ApexCharts.Blazor 補圖表</div>
+        <div style="margin-left:1.5em;color:#aaa">拖拉需補 <strong>SortableJS</strong>，Gauge 需自訂</div>
+      </div>
+      <div>
+        <span style="color:#ff9800;font-weight:bold">功能最完整 → 重新購買 DevExpress 授權</span>
+        <div style="margin-left:1.5em;color:#aaa">拖拉、Gauge、Sparkline、Chart 全部原生支援</div>
+        <div style="margin-left:1.5em;color:#aaa">長期維護成本最低（無需整合多套外部套件）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5em;color:#888;font-size:0.9em">三方比較完成。請在終端告知選擇，繼續更新規格文件。</p>

@@ -1,4 +1,5 @@
 using NSubstitute;
+using TPS.Nexus.Core;
 using TPS.Nexus.Kanban.Core.Enums;
 using TPS.Nexus.Kanban.Core.Interfaces;
 using TPS.Nexus.Kanban.Core.Models;

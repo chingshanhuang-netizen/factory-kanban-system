@@ -1,4 +1,5 @@
 @inject IEquipmentService EquipmentSvc
+@inject IOptions<KanbanModuleOptions> ModuleOpts
 
 @if (Widget != null)
 {
@@ -63,7 +64,7 @@
         {
             EquipmentWidgetId = Widget.Id,
             ComponentType = WidgetComponentType.ValueGauge,
-            RefreshInterval = 30,
+            RefreshInterval = ModuleOpts.Value.DefaultWidgetRefreshSecs,
             DisplayOrder = Widget.Components.Count
         };
         await EquipmentSvc.SaveComponentAsync(newComp);

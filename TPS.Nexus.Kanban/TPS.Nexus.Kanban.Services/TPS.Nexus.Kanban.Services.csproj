@@ -8,7 +8,6 @@
     <PackageReference Include="Dapper" Version="2.*" />
     <PackageReference Include="CsvHelper" Version="33.*" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.*" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TPS.Nexus.Kanban.Core\TPS.Nexus.Kanban.Core.csproj" />

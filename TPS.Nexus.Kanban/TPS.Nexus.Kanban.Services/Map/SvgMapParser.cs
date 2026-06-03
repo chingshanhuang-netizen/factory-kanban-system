@@ -1,3 +1,4 @@
+using TPS.Nexus.Kanban.Core.Constants;
 using TPS.Nexus.Kanban.Core.Models;
 
 namespace TPS.Nexus.Kanban.Services.Map;
@@ -10,7 +11,7 @@ public class SvgMapParser
 
     public async Task<FactoryMap> ParseAsync(Stream file, string fileName)
     {
-        var dir = Path.Combine(_storageRoot, "maps");
+        var dir = Path.Combine(_storageRoot, KanbanAssets.MapsSubdir);
         Directory.CreateDirectory(dir);
         var savedName = $"{Guid.NewGuid()}.svg";
         var fullPath = Path.Combine(dir, savedName);
@@ -20,7 +21,7 @@ public class SvgMapParser
 
         return new FactoryMap
         {
-            FilePath = $"/module-assets/TPS.Nexus.Kanban/maps/{savedName}",
+            FilePath = $"{KanbanAssets.ModulePrefix}/{KanbanAssets.MapsSubdir}/{savedName}",
             FormatType = Core.Enums.MapFormatType.Svg,
             CreatedAt = DateTime.UtcNow
         };

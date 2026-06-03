@@ -1,0 +1,31 @@
+### # Try build 1st game - snake game 
+
+create a folder "snake_game". and open it via VS Code 
+
+$ claude 
+create a one-page snake game as a simple server running on localhost.
+created a README.md file to document the steps to start the server as well.
+
+start the server 
+
+## feature: 2nd food 
+now, I want to have 2 food available to consume all the time during the game instead of just 1 food.
+
+## feature: pause features 
+implement a new feature after the game starts, users could press space as a toggle to pause/resume the game. 
+
+## [Homework] feature: 3rd super food
+next, add one additional super food with the shape of circle in each game. when the snake consume this type of food, add 2 tails. 
+In addition, to prevent from crashing, after consuming food, adding tails operation to the end of the existing snake rather than to the start.
+
+## [Homework] feature: go through 
+implement a new feature. I now want to remove the wall concept. I want to allow the snake to "go through" the wall from the end of right side directly to the start of the left side in the same row, and vice versa. Similarly, allow the snake to go through from the top of the column to the bottom of the column and vice versa.           w
+
+# stop the server to clean up the port 
+stop the server 
+
+# (optional) initialize - logout existing account
+claude 
+/clear
+/logout
+

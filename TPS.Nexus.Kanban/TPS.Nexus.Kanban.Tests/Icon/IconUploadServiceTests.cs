@@ -1,4 +1,5 @@
 using NSubstitute;
+using TPS.Nexus.Core;
 using TPS.Nexus.Kanban.Core.Interfaces;
 using TPS.Nexus.Kanban.Services.Icon;
 using Xunit;

@@ -1,0 +1,122 @@
+<h2>設計第四節：View 層 — Razor 元件結構</h2>
+<p class="subtitle">TPS.Nexus.Kanban.Web (RCL) 元件樹與頁面佈局</p>
+
+<div class="section">
+  <h3>頁面結構（Pages/）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+      <div><strong>KanbanMapPage.razor</strong>　<span style="color:#888">← /kanban/{mapId} 主頁面</span></div>
+      <div style="margin-left:1.5em;color:#aaa">整合地圖畫布、工具列、版本管理、警報通知</div>
+      <div style="margin-top:0.3em"><strong>KanbanSettingsPage.razor</strong>　<span style="color:#888">← /kanban/settings 設定頁</span></div>
+      <div style="margin-left:1.5em;color:#aaa">資料來源管理、設備清單 CRUD、圖示上傳</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>主頁面佈局線框圖</h3>
+  <div class="mockup">
+    <div class="mockup-header">KanbanMapPage — 檢視模式 / 編輯模式</div>
+    <div class="mockup-body" style="padding:0">
+      <div class="mock-nav" style="display:flex;justify-content:space-between;align-items:center;padding:0.4em 1em">
+        <span>🗺️ 廠區看板：<strong>A 廠一樓</strong>　<span style="color:#888;font-size:0.85em">v3 (已發布)</span></span>
+        <span>
+          <button class="mock-button" style="font-size:0.8em;padding:0.2em 0.7em">✏️ 編輯模式</button>
+          <button class="mock-button" style="font-size:0.8em;padding:0.2em 0.7em;margin-left:0.5em">📋 版本記錄</button>
+        </span>
+      </div>
+      <div style="display:flex;height:340px">
+        <div style="flex:1;position:relative;background:#1a1a2e;overflow:hidden">
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#333;font-size:0.8em">
+            FactoryMapCanvas<br>（地圖底圖 + SVG 設備疊層）
+          </div>
+          <!-- Equipment Widget 1 -->
+          <div style="position:absolute;top:60px;left:80px;background:#0f3460;border:1px solid #16213e;border-radius:6px;padding:8px;width:130px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="color:#4caf50;font-size:1.1em">⚙️</span>
+              <span style="color:#fff;font-size:0.78em;font-weight:bold">CNC-01</span>
+              <span style="background:#4caf50;color:#fff;font-size:0.6em;padding:1px 5px;border-radius:3px">運行中</span>
+            </div>
+            <div style="color:#aaa;font-size:0.72em">轉速：<span style="color:#fff">1,200 RPM</span></div>
+            <div style="color:#aaa;font-size:0.72em">溫度：<span style="color:#fff">68.3 °C</span></div>
+            <div style="background:#0d2137;height:30px;margin-top:4px;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#556;font-size:0.65em">TrendChart</div>
+          </div>
+          <!-- Equipment Widget 2 (Alarm) -->
+          <div style="position:absolute;top:160px;left:260px;background:#3d0000;border:1px solid #7f0000;border-radius:6px;padding:8px;width:130px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="font-size:1.1em">🔧</span>
+              <span style="color:#fff;font-size:0.78em;font-weight:bold">PUMP-03</span>
+              <span style="background:#f44336;color:#fff;font-size:0.6em;padding:1px 5px;border-radius:3px">⚠ 警報</span>
+            </div>
+            <div style="color:#aaa;font-size:0.72em">壓力：<span style="color:#f44336">12.8 bar ↑</span></div>
+            <div style="background:#1a0000;height:30px;margin-top:4px;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#556;font-size:0.65em">TrendChart</div>
+          </div>
+          <!-- Equipment Widget 3 -->
+          <div style="position:absolute;top:80px;left:320px;background:#0f3460;border:1px solid #16213e;border-radius:6px;padding:8px;width:130px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="font-size:1.1em">🏭</span>
+              <span style="color:#fff;font-size:0.78em;font-weight:bold">LINE-02</span>
+              <span style="background:#ff9800;color:#fff;font-size:0.6em;padding:1px 5px;border-radius:3px">待機</span>
+            </div>
+            <div style="color:#aaa;font-size:0.72em">產量：<span style="color:#fff">348 pcs</span></div>
+            <div style="color:#aaa;font-size:0.72em">良率：<span style="color:#4caf50">98.2 %</span></div>
+          </div>
+        </div>
+        <div style="width:200px;background:#111;border-left:1px solid #222;padding:0.7em;overflow-y:auto">
+          <div style="color:#888;font-size:0.75em;margin-bottom:0.5em">ALARM PANEL</div>
+          <div style="background:#3d0000;border-radius:4px;padding:6px;font-size:0.72em;color:#f44336;margin-bottom:6px">⚠ PUMP-03 壓力超標</div>
+          <div style="color:#888;font-size:0.75em;margin-top:1em;margin-bottom:0.5em">設備列表</div>
+          <div style="color:#aaa;font-size:0.72em;line-height:1.8">
+            <div>✅ CNC-01</div>
+            <div>⚠️ PUMP-03</div>
+            <div>🟡 LINE-02</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>元件樹（Components/）</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.8em;line-height:1.8">
+      <div>Components/</div>
+      <div style="margin-left:1.5em"><strong>Map/</strong></div>
+      <div style="margin-left:3em;color:#aaa">FactoryMapCanvas.razor　← 地圖底圖 + 設備疊層</div>
+      <div style="margin-left:3em;color:#aaa">MapImportPanel.razor　← 地圖上傳與格式選擇</div>
+      <div style="margin-left:1.5em;margin-top:0.3em"><strong>Widget/</strong></div>
+      <div style="margin-left:3em;color:#aaa">EquipmentWidgetPanel.razor　← 單一設備看板容器</div>
+      <div style="margin-left:3em;color:#aaa">StatusIndicator.razor　← 狀態燈（運行/停機/警報）</div>
+      <div style="margin-left:3em;color:#aaa">ValueGauge.razor　← 數值顯示（含單位）</div>
+      <div style="margin-left:3em;color:#aaa">TrendChart.razor　← 歷史趨勢圖（Chart.js）</div>
+      <div style="margin-left:3em;color:#aaa">EquipmentIconRenderer.razor　← 圖示渲染（CssClass/Image）</div>
+      <div style="margin-left:1.5em;margin-top:0.3em"><strong>Editor/</strong></div>
+      <div style="margin-left:3em;color:#aaa">MapEditorToolbar.razor　← 編輯/檢視切換、發布按鈕</div>
+      <div style="margin-left:3em;color:#aaa">DraggableEquipmentItem.razor　← 可拖拉設備節點</div>
+      <div style="margin-left:3em;color:#aaa">WidgetConfigurator.razor　← 設定元件組合與資料源</div>
+      <div style="margin-left:1.5em;margin-top:0.3em"><strong>Version/</strong></div>
+      <div style="margin-left:3em;color:#aaa">LayoutVersionPanel.razor　← 版本清單、發布、回溯</div>
+      <div style="margin-left:1.5em;margin-top:0.3em"><strong>Alarm/</strong></div>
+      <div style="margin-left:3em;color:#aaa">AlarmBadge.razor　← 設備上的警報角標</div>
+      <div style="margin-left:3em;color:#aaa">AlarmPanel.razor　← 側欄警報清單</div>
+      <div style="margin-left:3em;color:#aaa">AlarmToast.razor　← 新警報即時 Toast 通知</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>權限控制整合</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.8">
+      <div>使用 <strong>IFunctionPermissionService</strong> 控制：</div>
+      <div style="margin-left:1.5em;color:#aaa">KANBAN_VIEW　　→ 可查看看板地圖</div>
+      <div style="margin-left:1.5em;color:#aaa">KANBAN_EDIT　　→ 可進入編輯模式、拖拉佈局</div>
+      <div style="margin-left:1.5em;color:#aaa">KANBAN_PUBLISH　→ 可發布草稿版本</div>
+      <div style="margin-left:1.5em;color:#aaa">KANBAN_SETTINGS → 可管理設備、資料來源</div>
+      <div style="margin-top:0.5em;color:#888">元件內注入 IFunctionPermissionService，動態顯示/隱藏操作按鈕</div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5em;color:#888;font-size:0.9em">✅ 設計第四節。確認後在終端回覆，我將彙整完整設計並撰寫規格文件。</p>

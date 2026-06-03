@@ -1,0 +1,116 @@
+<h2>設備看板元件互動設計（更新）</h2>
+<p class="subtitle">漸進式資訊揭露：地圖精簡 → Hover 摘要 → Click 完整詳情</p>
+
+<div class="section">
+  <h3>三層資訊揭露原則</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:2">
+      <div style="display:grid;grid-template-columns:0.8fr 1.5fr 1fr;gap:0.5em;color:#aaa;font-size:0.85em;margin-bottom:4px">
+        <div style="color:#888">層級</div><div style="color:#888">顯示內容</div><div style="color:#888">元件</div>
+      </div>
+      <div style="display:grid;grid-template-columns:0.8fr 1.5fr 1fr;gap:0.5em;align-items:start">
+        <div style="color:#4caf50">① 地圖常駐</div>
+        <div style="color:#aaa">圖示 + 設備名稱 + 狀態燈號<br><span style="color:#666;font-size:0.9em">（僅顯示運行/停機/警報）</span></div>
+        <div>EquipmentWidgetPanel</div>
+
+        <div style="color:#2196f3">② Hover 快覽</div>
+        <div style="color:#aaa">所有參數數值 + 趨勢迷你圖<br><span style="color:#666;font-size:0.9em">（DxTooltip 浮出）</span></div>
+        <div>DxTooltip<br>+ ValueGauge<br>+ DxSparkline</div>
+
+        <div style="color:#ff9800">③ Click 詳情</div>
+        <div style="color:#aaa">工單、警報原因、文件、自訂連結<br><span style="color:#666;font-size:0.9em">（DxFlyout 側欄展開）</span></div>
+        <div>EquipmentDetailDrawer<br>+ DxGrid<br>+ DxChart</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>地圖上看板元件對比（簡化前 vs 簡化後）</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header" style="background:#3d2020">❌ 簡化前（資訊過多）</div>
+      <div class="mockup-body" style="background:#1a1a2e;padding:1em">
+        <div style="background:#0f3460;border-radius:8px;padding:10px;width:140px;border:1px solid #1a4a8a">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span>⚙️</span><span style="color:#fff;font-size:0.78em;font-weight:bold">CNC-01</span>
+            <span style="background:#4caf50;color:#fff;font-size:0.6em;padding:1px 4px;border-radius:3px">運行中</span>
+          </div>
+          <div style="color:#aaa;font-size:0.7em">轉速：<span style="color:#fff">1,200 RPM</span></div>
+          <div style="color:#aaa;font-size:0.7em">溫度：<span style="color:#fff">68.3 °C</span></div>
+          <div style="color:#aaa;font-size:0.7em">良率：<span style="color:#4caf50">98.2 %</span></div>
+          <svg width="120" height="28" style="margin-top:5px">
+            <polyline points="0,22 25,18 50,20 75,12 100,15 120,10" fill="none" stroke="#2196f3" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div style="color:#888;font-size:0.72em;margin-top:8px">地圖擁擠、資訊密度高</div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header" style="background:#1a3d20">✅ 簡化後（清爽精簡）</div>
+      <div class="mockup-body" style="background:#1a1a2e;padding:1em">
+        <div style="background:#0f3460;border-radius:8px;padding:10px;width:80px;border:1px solid #1a4a8a;text-align:center">
+          <span style="font-size:1.8em">⚙️</span>
+          <div style="color:#fff;font-size:0.72em;margin:4px 0">CNC-01</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:4px">
+            <div style="width:10px;height:10px;background:#4caf50;border-radius:50%;box-shadow:0 0 5px #4caf50"></div>
+            <span style="color:#4caf50;font-size:0.65em">運行中</span>
+          </div>
+        </div>
+        <div style="color:#888;font-size:0.72em;margin-top:8px">地圖清晰、一目了然</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Hover 浮出內容（DxTooltip）</h3>
+  <div class="mockup">
+    <div class="mockup-header">滑鼠停留時顯示</div>
+    <div class="mockup-body" style="background:#1a1a2e;padding:1.5em;display:flex;gap:1.5em;align-items:flex-start;flex-wrap:wrap">
+      <!-- Simplified widget -->
+      <div style="background:#0f3460;border-radius:8px;padding:10px;width:80px;border:2px solid #2196f3;text-align:center">
+        <span style="font-size:1.8em">⚙️</span>
+        <div style="color:#fff;font-size:0.72em;margin:4px 0">CNC-01</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px">
+          <div style="width:10px;height:10px;background:#4caf50;border-radius:50%;box-shadow:0 0 5px #4caf50"></div>
+          <span style="color:#4caf50;font-size:0.65em">運行中</span>
+        </div>
+      </div>
+      <!-- Tooltip -->
+      <div style="background:#0d2137;border:1px solid #1a4a8a;border-radius:8px;padding:12px;min-width:180px;box-shadow:0 4px 15px rgba(0,0,0,0.5)">
+        <div style="color:#fff;font-size:0.8em;font-weight:bold;margin-bottom:8px;border-bottom:1px solid #1a4a8a;padding-bottom:5px">⚙️ CNC-01 — 參數摘要</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:0.72em">
+          <div style="color:#888">轉速</div><div style="color:#fff;text-align:right">1,200 RPM</div>
+          <div style="color:#888">溫度</div><div style="color:#ff9800;text-align:right">68.3 °C</div>
+          <div style="color:#888">良率</div><div style="color:#4caf50;text-align:right">98.2 %</div>
+          <div style="color:#888">產量</div><div style="color:#fff;text-align:right">348 pcs</div>
+        </div>
+        <div style="margin-top:8px">
+          <div style="color:#888;font-size:0.65em;margin-bottom:3px">趨勢（過去1小時）</div>
+          <svg width="155" height="30">
+            <polyline points="0,25 25,20 50,22 75,15 100,18 130,10 155,12" fill="none" stroke="#2196f3" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div style="color:#888;font-size:0.65em;margin-top:5px;text-align:center">點擊查看完整詳情 →</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>元件更新摘要</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-family:monospace;font-size:0.82em;line-height:1.9">
+      <div><strong>EquipmentWidgetPanel.razor</strong>（精簡）</div>
+      <div style="margin-left:1.5em;color:#4caf50">僅含：EquipmentIconRenderer + 設備名稱 + StatusIndicator</div>
+      <div style="margin-left:1.5em;color:#888">移除：ValueGauge、TrendChart（改至 Tooltip 顯示）</div>
+      <div style="margin-top:0.5em"><strong>EquipmentTooltip.razor</strong>（使用 DxTooltip）</div>
+      <div style="margin-left:1.5em;color:#4caf50">Hover 時顯示所有參數值 + DxSparkline 迷你趨勢圖</div>
+      <div style="margin-top:0.5em"><strong>EquipmentDetailDrawer.razor</strong>（使用 DxFlyout）</div>
+      <div style="margin-left:1.5em;color:#4caf50">Click 時展開：DxChart 完整圖表 + DxGrid 工單/警報清單 + 連結頁籤</div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:1.5em;color:#888;font-size:0.9em">✅ 設備看板簡化設計確認。回覆後撰寫完整規格文件。</p>
