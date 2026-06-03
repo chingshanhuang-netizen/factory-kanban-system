@@ -63,7 +63,7 @@ public class AlarmService : IAlarmService
             {
                 _logger.LogWarning(
                     "AlarmRule {RuleId} has unrecognised condition '{Condition}' — skipping.",
-                    rule.Id, rule.Condition.Trim());
+                    rule.Id, rule.Condition?.Trim() ?? "(null)");
                 continue;
             }
 
@@ -100,7 +100,8 @@ public class AlarmService : IAlarmService
                 continue;
             }
 
-            if (!EvaluateCondition(rule.Condition, rule.Threshold, numVal)) continue;
+            // null-safety guaranteed by IsKnownCondition check above
+            if (!EvaluateCondition(rule.Condition!, rule.Threshold, numVal)) continue;
 
             // A-2 fix: skip INSERT if an unresolved alarm for this equipment+rule already exists,
             // preventing duplicate records from being created on every polling cycle.
@@ -112,7 +113,7 @@ public class AlarmService : IAlarmService
                 EquipmentId   = equipmentId,
                 EquipmentName = equipmentName,
                 Level         = rule.AlarmLevel,
-                Message       = $"{equipmentName}: {config.Name} {rule.Condition.Trim()} {rule.Threshold} (actual: {numVal})",
+                Message       = $"{equipmentName}: {config.Name} {rule.Condition!.Trim()} {rule.Threshold} (actual: {numVal})",
                 TriggeredAt   = DateTime.UtcNow,
                 AlarmRuleId   = rule.Id   // AS-1: stored for per-rule dedup
             };

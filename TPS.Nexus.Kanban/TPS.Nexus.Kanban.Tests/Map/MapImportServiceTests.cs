@@ -1,5 +1,6 @@
 using NSubstitute;
 using TPS.Nexus.Core;
+using TPS.Nexus.Kanban.Core.Constants;
 using TPS.Nexus.Kanban.Core.Enums;
 using TPS.Nexus.Kanban.Core.Interfaces;
 using TPS.Nexus.Kanban.Core.Models;
@@ -141,21 +142,21 @@ public class MapImportServiceTests
     public async Task DeleteAsync_RemovesPhysicalFile()
     {
         var storageRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(Path.Combine(storageRoot, "maps"));
+        Directory.CreateDirectory(Path.Combine(storageRoot, KanbanAssets.MapsSubdir));
 
         // Create a fake SVG file as the parser would
         var savedName = $"{Guid.NewGuid()}.svg";
-        var physicalPath = Path.Combine(storageRoot, "maps", savedName);
+        var physicalPath = Path.Combine(storageRoot, KanbanAssets.MapsSubdir, savedName);
         await File.WriteAllTextAsync(physicalPath, "<svg/>");
 
         // The stored URL path (relative) that would be in the DB
-        var urlPath = $"/module-assets/TPS.Nexus.Kanban/maps/{savedName}";
+        var urlPath = $"{KanbanAssets.ModulePrefix}/{KanbanAssets.MapsSubdir}/{savedName}";
 
         Assert.True(File.Exists(physicalPath), "precondition: file exists before delete");
 
         // Simulate what MapImportService.TryDeleteFile does — resolve URL to physical path
         var fileName = Path.GetFileName(urlPath);
-        var resolvedPath = Path.Combine(storageRoot, "maps", fileName);
+        var resolvedPath = Path.Combine(storageRoot, KanbanAssets.MapsSubdir, fileName);
         if (File.Exists(resolvedPath)) File.Delete(resolvedPath);
 
         Assert.False(File.Exists(physicalPath), "file should be deleted");

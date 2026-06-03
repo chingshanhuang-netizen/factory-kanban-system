@@ -1,5 +1,6 @@
 using NSubstitute;
 using TPS.Nexus.Core;
+using TPS.Nexus.Kanban.Core.Constants;
 using TPS.Nexus.Kanban.Core.Interfaces;
 using TPS.Nexus.Kanban.Services.Icon;
 using Xunit;
@@ -90,7 +91,7 @@ public class IconUploadServiceTests
 
         var url = await svc.UploadAsync(stream, fileName);
 
-        Assert.StartsWith("/module-assets/TPS.Nexus.Kanban/images/equipment-icons/", url);
+        Assert.StartsWith($"{KanbanAssets.ModulePrefix}/{KanbanAssets.IconsSubdir}/", url);
         Assert.EndsWith(Path.GetExtension(fileName), url);
 
         Directory.Delete(tempRoot, recursive: true);
