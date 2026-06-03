@@ -105,6 +105,71 @@ public class JsonDataAdapterTests
         File.Delete(tmpFile);
     }
 
+    // ── DA-2: FileNotFoundException wrapped with config context ──────────────
+
+    [Fact]
+    public async Task FetchAsync_MissingFile_ThrowsInvalidOperationWithContext()
+    {
+        var config = new DataSourceConfig
+        {
+            Name     = "sensor-json",
+            Id       = 5,
+            FilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json")
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new JsonDataAdapter().FetchAsync(config));
+
+        Assert.Contains("sensor-json", ex.Message);
+        Assert.Contains("5", ex.Message);
+    }
+
+    [Fact]
+    public async Task FetchHistoryAsync_MissingFile_ThrowsInvalidOperationWithContext()
+    {
+        var config = new DataSourceConfig
+        {
+            Name     = "history-json",
+            Id       = 9,
+            FilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json")
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new JsonDataAdapter().FetchHistoryAsync(config, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow));
+
+        Assert.Contains("history-json", ex.Message);
+    }
+
+    // ── DA-3: JsonException (malformed file) wrapped with config context ──────
+
+    [Fact]
+    public async Task FetchAsync_InvalidJson_ThrowsInvalidOperationWithContext()
+    {
+        var tmpFile = await WriteTempFileAsync("{ not valid json {{{{");
+        var config  = new DataSourceConfig { Name = "bad-json", Id = 3, FilePath = tmpFile };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new JsonDataAdapter().FetchAsync(config));
+
+        Assert.Contains("bad-json", ex.Message);
+        Assert.Contains("invalid JSON", ex.Message);
+        File.Delete(tmpFile);
+    }
+
+    [Fact]
+    public async Task FetchHistoryAsync_InvalidJson_ThrowsInvalidOperationWithContext()
+    {
+        var tmpFile = await WriteTempFileAsync("<<<not json>>>");
+        var config  = new DataSourceConfig { Name = "bad-json-hist", Id = 4, FilePath = tmpFile };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new JsonDataAdapter().FetchHistoryAsync(config, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow));
+
+        Assert.Contains("bad-json-hist", ex.Message);
+        Assert.Contains("invalid JSON", ex.Message);
+        File.Delete(tmpFile);
+    }
+
     private static async Task<string> WriteTempFileAsync(string content)
     {
         var path = Path.GetTempFileName();

@@ -12,17 +12,35 @@ public class JsonDataAdapter
             ?? throw new InvalidOperationException(
                 $"DataSourceConfig '{config.Name}' (Id={config.Id}): FilePath is required for JSON source.");
 
-        var json = await File.ReadAllTextAsync(path);
-        using var doc = JsonDocument.Parse(json);
-
-        var target = string.IsNullOrEmpty(config.QueryOrPath)
-            ? doc.RootElement
-            : NavigatePath(doc.RootElement, config.QueryOrPath, config.Name);
-
-        if (target.ValueKind == JsonValueKind.Object)
+        // DA-2: IOException (FileNotFoundException, etc.) wrapped with config context.
+        string json;
+        try { json = await File.ReadAllTextAsync(path); }
+        catch (IOException ex)
         {
-            foreach (var prop in target.EnumerateObject())
-                result.Fields[prop.Name] = ExtractValue(prop.Value);
+            throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): Cannot read JSON file at '{path}'. Inner: {ex.Message}", ex);
+        }
+
+        // DA-3: malformed JSON wrapped with config context so callers know which config is broken.
+        JsonDocument doc;
+        try { doc = JsonDocument.Parse(json); }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): File at '{path}' contains invalid JSON. Inner: {ex.Message}", ex);
+        }
+
+        using (doc)
+        {
+            var target = string.IsNullOrEmpty(config.QueryOrPath)
+                ? doc.RootElement
+                : NavigatePath(doc.RootElement, config.QueryOrPath, config.Name);
+
+            if (target.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var prop in target.EnumerateObject())
+                    result.Fields[prop.Name] = ExtractValue(prop.Value);
+            }
         }
 
         return result;
@@ -40,22 +58,38 @@ public class JsonDataAdapter
             ?? throw new InvalidOperationException(
                 $"DataSourceConfig '{config.Name}' (Id={config.Id}): FilePath is required for JSON source.");
 
-        var json = await File.ReadAllTextAsync(path);
-        using var doc = JsonDocument.Parse(json);
-
-        var target = string.IsNullOrEmpty(config.QueryOrPath)
-            ? doc.RootElement
-            : NavigatePath(doc.RootElement, config.QueryOrPath, config.Name);
-
-        if (target.ValueKind == JsonValueKind.Array)
+        string json;
+        try { json = await File.ReadAllTextAsync(path); }
+        catch (IOException ex)
         {
-            foreach (var item in target.EnumerateArray())
+            throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): Cannot read JSON file at '{path}'. Inner: {ex.Message}", ex);
+        }
+
+        JsonDocument doc;
+        try { doc = JsonDocument.Parse(json); }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): File at '{path}' contains invalid JSON. Inner: {ex.Message}", ex);
+        }
+
+        using (doc)
+        {
+            var target = string.IsNullOrEmpty(config.QueryOrPath)
+                ? doc.RootElement
+                : NavigatePath(doc.RootElement, config.QueryOrPath, config.Name);
+
+            if (target.ValueKind == JsonValueKind.Array)
             {
-                var row = new DataResult();
-                if (item.ValueKind == JsonValueKind.Object)
-                    foreach (var prop in item.EnumerateObject())
-                        row.Fields[prop.Name] = ExtractValue(prop.Value);
-                results.Add(row);
+                foreach (var item in target.EnumerateArray())
+                {
+                    var row = new DataResult();
+                    if (item.ValueKind == JsonValueKind.Object)
+                        foreach (var prop in item.EnumerateObject())
+                            row.Fields[prop.Name] = ExtractValue(prop.Value);
+                    results.Add(row);
+                }
             }
         }
 

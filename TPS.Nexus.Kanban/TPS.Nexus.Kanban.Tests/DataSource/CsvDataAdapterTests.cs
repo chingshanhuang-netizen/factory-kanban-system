@@ -91,6 +91,42 @@ public class CsvDataAdapterTests
         File.Delete(tmpFile);
     }
 
+    // ── DA-1: FileNotFoundException wrapped with config context ──────────────
+
+    [Fact]
+    public async Task FetchAsync_MissingFile_ThrowsInvalidOperationWithContext()
+    {
+        var config = new DataSourceConfig
+        {
+            Name     = "sensor-csv",
+            Id       = 42,
+            FilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv")  // guaranteed non-existent
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new CsvDataAdapter().FetchAsync(config));
+
+        Assert.Contains("sensor-csv", ex.Message);
+        Assert.Contains("42", ex.Message);
+    }
+
+    [Fact]
+    public async Task FetchHistoryAsync_MissingFile_ThrowsInvalidOperationWithContext()
+    {
+        var config = new DataSourceConfig
+        {
+            Name     = "history-csv",
+            Id       = 7,
+            FilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv")
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new CsvDataAdapter().FetchHistoryAsync(config, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow));
+
+        Assert.Contains("history-csv", ex.Message);
+        Assert.Contains("7", ex.Message);
+    }
+
     private static async Task<string> WriteTempFileAsync(string content)
     {
         var path = Path.GetTempFileName();
