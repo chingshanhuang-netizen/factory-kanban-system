@@ -45,7 +45,7 @@
                         <RadzenDataGridColumn TItem="Equipment" Title="操作" Width="120px">
                             <Template Context="eq">
                                 <RadzenButton Text="編輯" Size="ButtonSize.ExtraSmall"
-                                              Click="@(() => _equipGrid?.EditRow(eq))" />
+                                              Click="@(() => _equipGrid?.EditRow(eq) ?? Task.CompletedTask)" />
                                 <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
                                               ButtonStyle="ButtonStyle.Danger"
                                               Click="@(() => DeleteEquipment(eq.Id))"
@@ -54,7 +54,7 @@
                             <EditTemplate Context="eq">
                                 <RadzenButton Text="儲存" Size="ButtonSize.ExtraSmall"
                                               ButtonStyle="ButtonStyle.Primary"
-                                              Click="@(() => _equipGrid?.UpdateRow(eq))" />
+                                              Click="@(() => _equipGrid?.UpdateRow(eq) ?? Task.CompletedTask)" />
                             </EditTemplate>
                         </RadzenDataGridColumn>
                     </Columns>

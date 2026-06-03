@@ -6,8 +6,15 @@
 @code {
     [Parameter] public Microsoft.AspNetCore.SignalR.Client.HubConnection? HubConnection { get; set; }
 
+    private Microsoft.AspNetCore.SignalR.Client.HubConnection? _registeredHub;
+
     protected override void OnParametersSet()
     {
+        if (ReferenceEquals(_registeredHub, HubConnection)) return;
+
+        _registeredHub?.Remove("ReceiveAlarm");
+        _registeredHub = HubConnection;
+
         HubConnection?.On<int, string, string>("ReceiveAlarm", (equipmentId, level, message) =>
         {
             var severity = level switch
@@ -16,12 +23,12 @@
                 "Warning"  => NotificationSeverity.Warning,
                 _ => NotificationSeverity.Info
             };
-            NotificationSvc.Notify(severity, $"警報 [{level}]", message, duration: 5000);
+            InvokeAsync(() => NotificationSvc.Notify(severity, $"警報 [{level}]", message, duration: 5000));
         });
     }
 
     public void Dispose()
     {
-        HubConnection?.Remove("ReceiveAlarm");
+        _registeredHub?.Remove("ReceiveAlarm");
     }
 }

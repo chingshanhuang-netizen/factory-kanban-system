@@ -12,7 +12,7 @@ public class JsonDataAdapter
             ?? throw new InvalidOperationException("FilePath is required for JSON source.");
 
         var json = await File.ReadAllTextAsync(path);
-        var doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
 
         var target = string.IsNullOrEmpty(config.QueryOrPath)
             ? doc.RootElement
@@ -34,7 +34,7 @@ public class JsonDataAdapter
             ?? throw new InvalidOperationException("FilePath is required for JSON source.");
 
         var json = await File.ReadAllTextAsync(path);
-        var doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
 
         var target = string.IsNullOrEmpty(config.QueryOrPath)
             ? doc.RootElement
