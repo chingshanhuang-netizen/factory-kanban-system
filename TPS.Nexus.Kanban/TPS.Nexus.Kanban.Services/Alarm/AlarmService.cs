@@ -16,17 +16,20 @@ public class AlarmService : IAlarmService
     private readonly IDbConnectionFactory _db;
     private readonly IHubContext<KanbanAlarmHub> _hub;
     private readonly IDataSourceService _dataSvc;
+    private readonly IEquipmentService _equip;
     private readonly ILogger<AlarmService> _logger;
 
     public AlarmService(
         IDbConnectionFactory db,
         IHubContext<KanbanAlarmHub> hub,
         IDataSourceService dataSvc,
+        IEquipmentService equip,
         ILogger<AlarmService> logger)
     {
         _db      = db;
         _hub     = hub;
         _dataSvc = dataSvc;
+        _equip   = equip;
         _logger  = logger;
     }
 
@@ -43,7 +46,7 @@ public class AlarmService : IAlarmService
         var rules = await GetRulesAsync(equipmentId);
 
         // A-3: load all data source configs in one query instead of N individual queries
-        var allConfigs = (await GetAllDataSourceConfigsAsync()).ToDictionary(c => c.Id);
+        var allConfigs = (await _equip.GetAllDataSourceConfigsAsync()).ToDictionary(c => c.Id);
 
         foreach (var rule in rules)
         {
@@ -214,6 +217,10 @@ public class AlarmService : IAlarmService
     // A-7: centralise known condition strings so EvaluateCondition and the validator stay in sync
     private static readonly HashSet<string> KnownConditions = new() { ">", "<", ">=", "<=", "==", "!=" };
 
+    // Precision boundary for floating-point equality checks on alarm thresholds.
+    // Sensor readings within this tolerance of the threshold are treated as equal.
+    private const double EqualityEpsilon = 1e-9;
+
     // null guard: Dapper can map a NULL DB column to null even when the model property has a
     // default initialiser (= string.Empty), so treat null as an unknown/invalid condition.
     private static bool IsKnownCondition(string? condition) =>
@@ -226,8 +233,8 @@ public class AlarmService : IAlarmService
             "<"  => value < threshold,
             ">=" => value >= threshold,
             "<=" => value <= threshold,
-            "==" => Math.Abs(value - threshold) < 1e-9,
-            "!=" => Math.Abs(value - threshold) >= 1e-9,
+            "==" => Math.Abs(value - threshold) < EqualityEpsilon,
+            "!=" => Math.Abs(value - threshold) >= EqualityEpsilon,
             _    => false
         };
 
@@ -245,12 +252,6 @@ public class AlarmService : IAlarmService
             """,
             new { EquipmentId = equipmentId, RuleId = ruleId });
         return count > 0;
-    }
-
-    private async Task<IEnumerable<DataSourceConfig>> GetAllDataSourceConfigsAsync()
-    {
-        await using var conn = _db.CreateConnection();
-        return await conn.QueryAsync<DataSourceConfig>("SELECT * FROM kanban_datasource_configs");
     }
 
 }

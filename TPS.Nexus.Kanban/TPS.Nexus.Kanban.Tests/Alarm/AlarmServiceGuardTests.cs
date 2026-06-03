@@ -17,7 +17,8 @@ public class AlarmServiceGuardTests
         var db      = Substitute.For<IDbConnectionFactory>();
         var hub     = Substitute.For<IHubContext<KanbanAlarmHub>>();
         var dataSvc = Substitute.For<IDataSourceService>();
-        return new AlarmService(db, hub, dataSvc, NullLogger<AlarmService>.Instance);
+        var equip   = Substitute.For<IEquipmentService>();
+        return new AlarmService(db, hub, dataSvc, equip, NullLogger<AlarmService>.Instance);
     }
 
     // ── AS-2: SaveRuleAsync — EquipmentId guard ───────────────────────────────

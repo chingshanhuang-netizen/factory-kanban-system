@@ -17,7 +17,9 @@
                             <RadzenTextBox @bind-Value="comp.Unit" />
                         </RadzenFormField>
                         <RadzenFormField Text="刷新間隔(秒)" Style="width:100%;margin-top:4px">
-                            <RadzenNumeric TValue="int" @bind-Value="comp.RefreshInterval" Min="5" Max="3600" />
+                            <RadzenNumeric TValue="int" @bind-Value="comp.RefreshInterval"
+                                              Min="@ModuleOpts.Value.WidgetRefreshMinSecs"
+                                              Max="@ModuleOpts.Value.WidgetRefreshMaxSecs" />
                         </RadzenFormField>
                         <RadzenFormField Text="資料來源" Style="width:100%;margin-top:4px">
                             <RadzenDropDown @bind-Value="comp.DataSourceConfigId"

@@ -1,4 +1,5 @@
 using TPS.Nexus.Kanban.Core.Constants;
+using TPS.Nexus.Kanban.Core.Enums;
 using TPS.Nexus.Kanban.Core.Models;
 
 namespace TPS.Nexus.Kanban.Services.Map;
@@ -22,7 +23,7 @@ public class SvgMapParser
         return new FactoryMap
         {
             FilePath = $"{KanbanAssets.ModulePrefix}/{KanbanAssets.MapsSubdir}/{savedName}",
-            FormatType = Core.Enums.MapFormatType.Svg,
+            FormatType = MapFormatType.Svg,
             CreatedAt = DateTime.UtcNow
         };
     }

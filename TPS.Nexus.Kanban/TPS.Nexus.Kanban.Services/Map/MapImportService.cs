@@ -1,5 +1,6 @@
 using Dapper;
 using TPS.Nexus.Core;
+using TPS.Nexus.Kanban.Core.Constants;
 using TPS.Nexus.Kanban.Core.Enums;
 using TPS.Nexus.Kanban.Core.Interfaces;
 using TPS.Nexus.Kanban.Core.Models;
@@ -98,7 +99,7 @@ public class MapImportService : IMapImportService
             else
             {
                 var fileName = Path.GetFileName(storedPath);
-                fullPath = Path.Combine(_webRootPath, "maps", fileName);
+                fullPath = Path.Combine(_webRootPath, KanbanAssets.MapsSubdir, fileName);
             }
             if (File.Exists(fullPath))
                 File.Delete(fullPath);

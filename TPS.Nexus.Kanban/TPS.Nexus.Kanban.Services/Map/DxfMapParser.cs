@@ -1,4 +1,5 @@
 using TPS.Nexus.Kanban.Core.Constants;
+using TPS.Nexus.Kanban.Core.Enums;
 using TPS.Nexus.Kanban.Core.Models;
 
 namespace TPS.Nexus.Kanban.Services.Map;
@@ -28,7 +29,7 @@ public class DxfMapParser
         return new FactoryMap
         {
             FilePath = $"{KanbanAssets.ModulePrefix}/{KanbanAssets.MapsSubdir}/{savedName}",
-            FormatType = Core.Enums.MapFormatType.Dxf,
+            FormatType = MapFormatType.Dxf,
             CreatedAt = DateTime.UtcNow
         };
     }
