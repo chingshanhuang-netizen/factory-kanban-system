@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Radzen.Blazor" Version="5.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TPS.Nexus.Kanban.Web\TPS.Nexus.Kanban.Web.csproj" />
+    <Reference Include="TPS.Nexus.Core">
+      <HintPath>..\libs\TPS.Nexus.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

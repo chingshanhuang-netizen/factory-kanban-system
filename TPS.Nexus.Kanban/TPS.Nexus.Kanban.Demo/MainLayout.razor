@@ -1,0 +1,24 @@
+@inherits LayoutComponentBase
+
+<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
+    <header class="app-header">
+        <span class="app-header-title">⚙ TPS Nexus 看板系統</span>
+        <span class="demo-badge">DEMO</span>
+        <nav style="display:flex;gap:4px;margin-left:16px">
+            <NavLink href="/kanban/1" Match="NavLinkMatch.Prefix" class="nav-link">
+                🗺 看板地圖
+            </NavLink>
+            <NavLink href="/kanban/settings" Match="NavLinkMatch.All" class="nav-link">
+                ⚙ 設定管理
+            </NavLink>
+        </nav>
+        <div style="margin-left:auto;color:#4a7a9b;font-size:11px">
+            廠區一樓平面圖 &nbsp;|&nbsp; 3 台設備 &nbsp;|&nbsp; 1 個活躍警報
+        </div>
+    </header>
+    <div style="flex:1;overflow:hidden">
+        @Body
+    </div>
+</div>
+
+<RadzenComponents />

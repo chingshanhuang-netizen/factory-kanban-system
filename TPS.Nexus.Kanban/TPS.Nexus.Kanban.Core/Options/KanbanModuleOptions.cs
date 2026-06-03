@@ -12,6 +12,7 @@ public class KanbanModuleOptions
     public int  TooltipHistoryWindowHours   { get; set; } = 1;
     public int  TooltipFieldsMaxCount       { get; set; } = 6;
     public int  TabDataColumnsMaxCount      { get; set; } = 5;
+    public int  TabDataWindowHours         { get; set; } = 24;
     public int  WidgetRefreshMinSecs        { get; set; } = 5;
     public int  WidgetRefreshMaxSecs        { get; set; } = 3600;
 }

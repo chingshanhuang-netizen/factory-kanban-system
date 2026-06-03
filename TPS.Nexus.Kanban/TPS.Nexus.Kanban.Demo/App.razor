@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <title>TPS Nexus 看板系統 — Demo</title>
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/dark.css" />
+    <link rel="stylesheet" href="_content/TPS.Nexus.Kanban.Web/css/kanban.css" />
+    <link rel="stylesheet" href="app.css" />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <script src="_framework/blazor.web.js"></script>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+    <script src="_content/TPS.Nexus.Kanban.Web/js/kanban-drag.js"></script>
+</body>
+</html>

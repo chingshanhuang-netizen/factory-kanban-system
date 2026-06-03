@@ -4,6 +4,7 @@
 @inject IAlarmService AlarmSvc
 @inject IFunctionPermissionService PermSvc
 @inject NotificationService NotifySvc
+@inject NavigationManager Navigation
 @implements IAsyncDisposable
 
 <PageTitle>工廠看板 — @(CurrentMap?.Name ?? "載入中")</PageTitle>
@@ -72,8 +73,9 @@
         PublishedVersion = await LayoutSvc.GetPublishedVersionAsync(MapId);
         await ReloadAlarms();
 
+        // W-2: WithUrl requires an absolute URI in Blazor Server; use NavigationManager to resolve.
         HubConn = new HubConnectionBuilder()
-            .WithUrl(KanbanRoutes.AlarmHubPath)
+            .WithUrl(Navigation.ToAbsoluteUri(KanbanRoutes.AlarmHubPath))
             .Build();
 
         HubConn.On<int, string, string>(KanbanRoutes.ReceiveAlarmEvent, async (_, _, _) =>

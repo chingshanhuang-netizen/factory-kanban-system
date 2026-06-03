@@ -1,4 +1,5 @@
 @inject IDataSourceService DataSvc
+@inject IEquipmentService EquipmentSvc
 @inject IOptions<KanbanModuleOptions> ModuleOpts
 
 <RadzenSidebar @bind-Expanded="IsOpen" Style="width:420px;position:fixed;right:0;top:0;height:100vh;z-index:50;background:#0d1b2a;border-left:1px solid #1a3a5c;">
@@ -124,9 +125,27 @@
         if (!IsOpen || EquipmentData == null) return;
 
         TabData.Clear();
-        foreach (var lc in LinkConfigs.Where(l => l.DataSourceConfigId.HasValue))
+        var allConfigs = (await EquipmentSvc.GetAllDataSourceConfigsAsync())
+                             .ToDictionary(c => c.Id);
+        var from = DateTime.UtcNow.AddHours(-ModuleOpts.Value.TabDataWindowHours);
+        var to   = DateTime.UtcNow;
+
+        foreach (var lc in LinkConfigs.Where(l =>
+            l.DataSourceConfigId.HasValue &&
+            (l.LinkType == LinkType.WorkOrder || l.LinkType == LinkType.AlarmHistory)))
         {
-            // Fetch data for WorkOrder / AlarmHistory tabs
+            if (!allConfigs.TryGetValue(lc.DataSourceConfigId!.Value, out var config))
+                continue;
+
+            try
+            {
+                var rows = await DataSvc.FetchHistoryAsync(config, from, to);
+                TabData[lc.Id] = rows.ToList();
+            }
+            catch
+            {
+                TabData[lc.Id] = new List<DataResult>();
+            }
         }
 
         ChartPoints.Clear();

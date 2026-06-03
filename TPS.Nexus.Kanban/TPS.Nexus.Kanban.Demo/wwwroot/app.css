@@ -1,0 +1,152 @@
+/* ─── Reset ─────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: #070d14; color: #c8d8e8;
+             font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; }
+
+/* ─── Header / Nav ───────────────────────────────────────────────────────── */
+.app-header {
+    background: #0a1929;
+    border-bottom: 1px solid #1a3a5c;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.app-header-title {
+    color: #4a8fc1;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.demo-badge {
+    background: #1a4070;
+    color: #5fa8d3;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+}
+
+.nav-link {
+    color: #7a9db8;
+    text-decoration: none;
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+.nav-link:hover { background: #132a42; color: #c8d8e8; }
+.nav-link.active { background: #1a3a5c; color: #e0ecf8; }
+
+/* ─── Kanban Map Canvas ───────────────────────────────────────────────────── */
+.kanban-map-container {
+    position: relative;
+    background: #0a1929;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+}
+
+.kanban-edit-mode { cursor: crosshair; }
+
+.kanban-equipment-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: auto;
+}
+
+/* ─── Equipment Widget ────────────────────────────────────────────────────── */
+.kanban-widget {
+    position: absolute;
+    background: rgba(10, 28, 48, 0.92);
+    border: 1px solid #1e5082;
+    border-radius: 8px;
+    padding: 10px 8px 7px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+    min-width: 80px;
+    backdrop-filter: blur(2px);
+}
+
+.kanban-widget:hover {
+    border-color: #4a8fc1;
+    box-shadow: 0 0 10px rgba(74, 143, 193, 0.35);
+    transform: translateY(-1px);
+}
+
+.kanban-widget.alarm-warning {
+    border-color: #f59e0b;
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.45);
+    animation: pulse-warning 2s ease-in-out infinite;
+}
+
+.kanban-widget.alarm-critical {
+    border-color: #ef4444;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.55);
+    animation: pulse-critical 1s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+    0%,100% { box-shadow: 0 0 8px rgba(245,158,11,.3); }
+    50%      { box-shadow: 0 0 20px rgba(245,158,11,.65); }
+}
+@keyframes pulse-critical {
+    0%,100% { box-shadow: 0 0 8px rgba(239,68,68,.4); }
+    50%      { box-shadow: 0 0 24px rgba(239,68,68,.85); }
+}
+
+.kanban-widget-icon {
+    font-size: 26px;
+    line-height: 1.1;
+    margin-bottom: 5px;
+}
+
+.kanban-widget-name {
+    font-size: 11px;
+    color: #c8d8e8;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 88px;
+}
+
+/* ─── Status Dot ─────────────────────────────────────────────────────────── */
+.kanban-status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 3px;
+}
+
+.kanban-status-running { background: #4caf50; box-shadow: 0 0 4px #4caf50; }
+.kanban-status-stopped { background: #607d8b; }
+.kanban-status-alarm   { background: #f59e0b; box-shadow: 0 0 6px #f59e0b;
+                         animation: blink-dot 1.2s step-start infinite; }
+@keyframes blink-dot { 50% { opacity: 0; } }
+
+/* ─── Alarm Badge ─────────────────────────────────────────────────────────── */
+.kanban-alarm-badge {
+    position: absolute;
+    top: -6px; right: -6px;
+    width: 18px; height: 18px;
+    background: #ef4444;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: bold;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 6px rgba(239,68,68,.7);
+    animation: pulse-critical 1s ease-in-out infinite;
+}
