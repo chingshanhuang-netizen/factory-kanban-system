@@ -1,6 +1,11 @@
 @inject ILayoutService LayoutSvc
 @inject IFunctionPermissionService PermSvc
 
+@if (_rollbackError != null)
+{
+    <div style="color:#f44336;font-size:0.82em;margin-bottom:6px">⚠ 回溯失敗：@_rollbackError</div>
+}
+
 <RadzenDataGrid Data="@Versions" TItem="LayoutVersion" Style="font-size:0.85em">
     <Columns>
         <RadzenDataGridColumn TItem="LayoutVersion" Property="VersionNo" Title="版本" Width="60px" />
@@ -42,11 +47,23 @@
         Versions = (await LayoutSvc.GetVersionHistoryAsync(MapId)).ToList();
     }
 
+    private string? _rollbackError;
+
     private async Task Rollback(int versionId)
     {
-        await LayoutSvc.RollbackAsync(versionId);
-        await LoadVersions();
-        await OnRolledBack.InvokeAsync();
+        // W-11: RollbackAsync throws InvalidOperationException for non-Archived versions;
+        // surface the error in the panel rather than crashing the page.
+        _rollbackError = null;
+        try
+        {
+            await LayoutSvc.RollbackAsync(versionId);
+            await LoadVersions();
+            await OnRolledBack.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _rollbackError = ex.Message;
+        }
     }
 
     private static string StatusColor(LayoutStatus s) => s switch

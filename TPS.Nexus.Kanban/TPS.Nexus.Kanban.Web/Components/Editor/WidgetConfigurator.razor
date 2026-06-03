@@ -56,6 +56,9 @@
     private async Task AddComponent()
     {
         if (Widget == null) return;
+        // W-13: Widget.Id == 0 means the widget has not been persisted yet; creating a
+        // component with EquipmentWidgetId = 0 would violate the FK constraint.
+        if (Widget.Id == 0) return;
         var newComp = new WidgetComponent
         {
             EquipmentWidgetId = Widget.Id,

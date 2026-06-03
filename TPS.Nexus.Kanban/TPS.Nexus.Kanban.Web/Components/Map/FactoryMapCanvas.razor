@@ -6,6 +6,13 @@
 @inject IFunctionPermissionService PermSvc
 @implements IAsyncDisposable
 
+@* W-6: guard non-positive MapId — route param parsing can produce 0 on unexpected input *@
+@if (MapId <= 0)
+{
+    <div style="padding:40px;text-align:center;color:#f44336">MapId 無效（值：@MapId）</div>
+    return;
+}
+
 <div id="map-canvas"
      class="kanban-map-container @(IsEditMode ? "kanban-edit-mode" : "")"
      style="width:100%;height:@(CanvasHeight)px;position:relative;">
@@ -110,7 +117,17 @@
         if (widget == null) return;
         widget.PositionX = x;
         widget.PositionY = y;
-        await EquipmentSvc.SaveWidgetAsync(widget);
+        // W-12: an unhandled exception in a [JSInvokable] method disconnects the Blazor
+        // circuit; catch and swallow so the drag operation fails silently rather than
+        // killing the entire page session.
+        try
+        {
+            await EquipmentSvc.SaveWidgetAsync(widget);
+        }
+        catch (Exception ex)
+        {
+            _ = ex; // position update is best-effort; will be re-persisted on next action
+        }
         await InvokeAsync(StateHasChanged);
     }
 
