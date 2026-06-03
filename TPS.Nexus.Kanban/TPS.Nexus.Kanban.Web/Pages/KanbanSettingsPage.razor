@@ -159,9 +159,18 @@
 
     private async Task OnEquipmentUpdate(Equipment eq)
     {
-        if (eq.Id == 0) await EquipmentSvc.CreateEquipmentAsync(eq);
-        else await EquipmentSvc.UpdateEquipmentAsync(eq);
-        await LoadAll();
+        // W-8: CreateEquipmentAsync throws ArgumentException for empty Name; catch and
+        // show a notification instead of letting the exception bubble to the circuit.
+        try
+        {
+            if (eq.Id == 0) await EquipmentSvc.CreateEquipmentAsync(eq);
+            else await EquipmentSvc.UpdateEquipmentAsync(eq);
+            await LoadAll();
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "儲存失敗", ex.Message);
+        }
     }
 
     private async Task DeleteEquipment(int id)

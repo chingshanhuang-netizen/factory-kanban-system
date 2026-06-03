@@ -4,17 +4,14 @@
     {
         case MapFormatType.Png:
         case MapFormatType.Jpg:
-            <img src="@Map.FilePath" alt="@Map.Name" class="kanban-map-layer"
-                 style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.65;pointer-events:none;" />
-            break;
-
         case MapFormatType.Svg:
         case MapFormatType.Dxf:
-            @if (!string.IsNullOrEmpty(SvgContent))
-            {
-                <div style="position:absolute;inset:0;opacity:0.65;pointer-events:none;"
-                     @((MarkupString)SvgContent)></div>
-            }
+            @* W-3/W-4 fix: render all image-based maps via <img>, not MarkupString.
+               Loading SVG/DXF through <img> sandboxes embedded scripts (no XSS).
+               It also avoids the broken server-side File.Exists(relative-path) path
+               resolution — the browser fetches the URL directly. *@
+            <img src="@Map.FilePath" alt="@Map.Name" class="kanban-map-layer"
+                 style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.65;pointer-events:none;" />
             break;
 
         case MapFormatType.JsonCoord:
@@ -26,17 +23,4 @@
 
 @code {
     [Parameter] public FactoryMap? Map { get; set; }
-
-    private string? SvgContent;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (Map?.FormatType is MapFormatType.Svg or MapFormatType.Dxf
-            && !string.IsNullOrEmpty(Map.FilePath))
-        {
-            var localPath = Map.FilePath.Replace("/module-assets/TPS.Nexus.Kanban/", string.Empty);
-            if (File.Exists(localPath))
-                SvgContent = await File.ReadAllTextAsync(localPath);
-        }
-    }
 }

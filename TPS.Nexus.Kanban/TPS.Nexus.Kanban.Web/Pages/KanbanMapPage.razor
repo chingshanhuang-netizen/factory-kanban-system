@@ -82,7 +82,16 @@
             await InvokeAsync(StateHasChanged);
         });
 
-        await HubConn.StartAsync();
+        // W-2: StartAsync throws if the hub endpoint is unreachable; catch to avoid
+        // crashing OnInitializedAsync and show a recoverable notification instead.
+        try
+        {
+            await HubConn.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Warning, "警報連線失敗", ex.Message);
+        }
     }
 
     private async Task HandleSaveDraft()
@@ -96,10 +105,18 @@
     private async Task HandlePublish()
     {
         if (DraftId == null) { NotifySvc.Notify(NotificationSeverity.Warning, "請先存草稿"); return; }
-        var published = await LayoutSvc.PublishAsync(DraftId.Value);
-        PublishedVersion = published;
-        DraftId = null;
-        NotifySvc.Notify(NotificationSeverity.Success, "已發布", $"v{published.VersionNo}");
+        // W-10: PublishAsync throws InvalidOperationException if draft is not in Draft status
+        try
+        {
+            var published = await LayoutSvc.PublishAsync(DraftId.Value);
+            PublishedVersion = published;
+            DraftId = null;
+            NotifySvc.Notify(NotificationSeverity.Success, "已發布", $"v{published.VersionNo}");
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "發布失敗", ex.Message);
+        }
     }
 
     private async Task HandleRollback()
@@ -116,6 +133,11 @@
     public async ValueTask DisposeAsync()
     {
         if (HubConn != null)
+        {
+            // W-1: stop the connection gracefully before disposing to avoid leaving a
+            // half-open connection on the server side.
+            try { await HubConn.StopAsync(); } catch { }
             await HubConn.DisposeAsync();
+        }
     }
 }
