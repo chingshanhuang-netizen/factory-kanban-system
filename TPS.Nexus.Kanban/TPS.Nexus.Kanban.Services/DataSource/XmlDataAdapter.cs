@@ -14,7 +14,19 @@ public class XmlDataAdapter
                 $"DataSourceConfig '{config.Name}' (Id={config.Id}): FilePath is required for XML source.");
 
         var doc = new XmlDocument();
-        doc.Load(path);
+        // DA-4/DA-5: FileNotFoundException (missing file) and XmlException (malformed XML) are both
+        // wrapped with config context so operators know which DataSourceConfig is misconfigured.
+        try { doc.Load(path); }
+        catch (FileNotFoundException ex)
+        {
+            throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): XML file not found at '{path}'.", ex);
+        }
+        catch (XmlException ex)
+        {
+            throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): File at '{path}' contains invalid XML. Inner: {ex.Message}", ex);
+        }
 
         var xpath = string.IsNullOrEmpty(config.QueryOrPath) ? "/*" : config.QueryOrPath;
 
@@ -56,7 +68,17 @@ public class XmlDataAdapter
                 $"DataSourceConfig '{config.Name}' (Id={config.Id}): FilePath is required for XML source.");
 
         var doc = new XmlDocument();
-        doc.Load(path);
+        try { doc.Load(path); }
+        catch (FileNotFoundException ex)
+        {
+            throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): XML file not found at '{path}'.", ex);
+        }
+        catch (XmlException ex)
+        {
+            throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): File at '{path}' contains invalid XML. Inner: {ex.Message}", ex);
+        }
 
         var xpath = string.IsNullOrEmpty(config.QueryOrPath) ? "//*" : config.QueryOrPath;
 

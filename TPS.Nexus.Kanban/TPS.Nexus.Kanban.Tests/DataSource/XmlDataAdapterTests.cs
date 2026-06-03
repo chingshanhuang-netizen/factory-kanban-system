@@ -107,6 +107,71 @@ public class XmlDataAdapterTests
         File.Delete(tmpFile);
     }
 
+    // ── DA-4: FileNotFoundException wrapped with config context ──────────────
+
+    [Fact]
+    public async Task FetchAsync_MissingFile_ThrowsInvalidOperationWithContext()
+    {
+        var config = new DataSourceConfig
+        {
+            Name     = "sensor-xml",
+            Id       = 11,
+            FilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.xml")
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new XmlDataAdapter().FetchAsync(config));
+
+        Assert.Contains("sensor-xml", ex.Message);
+        Assert.Contains("11", ex.Message);
+    }
+
+    [Fact]
+    public async Task FetchHistoryAsync_MissingFile_ThrowsInvalidOperationWithContext()
+    {
+        var config = new DataSourceConfig
+        {
+            Name     = "history-xml",
+            Id       = 12,
+            FilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.xml")
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new XmlDataAdapter().FetchHistoryAsync(config, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow));
+
+        Assert.Contains("history-xml", ex.Message);
+    }
+
+    // ── DA-5: XmlException (malformed XML) wrapped with config context ────────
+
+    [Fact]
+    public async Task FetchAsync_MalformedXml_ThrowsInvalidOperationWithContext()
+    {
+        var tmpFile = await WriteTempFileAsync("<root><unclosed>");
+        var config  = new DataSourceConfig { Name = "bad-xml", Id = 13, FilePath = tmpFile };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new XmlDataAdapter().FetchAsync(config));
+
+        Assert.Contains("bad-xml", ex.Message);
+        Assert.Contains("invalid XML", ex.Message);
+        File.Delete(tmpFile);
+    }
+
+    [Fact]
+    public async Task FetchHistoryAsync_MalformedXml_ThrowsInvalidOperationWithContext()
+    {
+        var tmpFile = await WriteTempFileAsync("<<not xml>>");
+        var config  = new DataSourceConfig { Name = "bad-xml-hist", Id = 14, FilePath = tmpFile };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new XmlDataAdapter().FetchHistoryAsync(config, DateTime.UtcNow.AddHours(-1), DateTime.UtcNow));
+
+        Assert.Contains("bad-xml-hist", ex.Message);
+        Assert.Contains("invalid XML", ex.Message);
+        File.Delete(tmpFile);
+    }
+
     // ── DS-2: from > to guard (validated at DataSourceService level) ──────────
 
     [Fact]

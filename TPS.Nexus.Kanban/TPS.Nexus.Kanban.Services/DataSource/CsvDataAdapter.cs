@@ -20,18 +20,29 @@ public class CsvDataAdapter
             MissingFieldFound = null
         };
 
-        using var reader = new StreamReader(path);
-        using var csv = new CsvReader(reader, csvConfig);
-
-        // DS-6: read header only if the file has at least one row; an empty file must not
-        // throw CsvHelperException from ReadHeader() being called before Read() returns true.
-        if (!csv.Read()) return Task.FromResult(result);
-        csv.ReadHeader();
-
-        if (csv.Read())
+        // DA-1: IOException (including FileNotFoundException) is wrapped with config context so
+        // operators know which DataSourceConfig is misconfigured, not just which file path failed.
+        try
         {
-            foreach (var header in csv.HeaderRecord ?? Array.Empty<string>())
-                result.Fields[header] = csv.GetField(header);
+            using var reader = new StreamReader(path);
+            using var csv = new CsvReader(reader, csvConfig);
+
+            // DS-6: read header only if the file has at least one row; an empty file must not
+            // throw CsvHelperException from ReadHeader() being called before Read() returns true.
+            if (!csv.Read()) return Task.FromResult(result);
+            csv.ReadHeader();
+
+            if (csv.Read())
+            {
+                foreach (var header in csv.HeaderRecord ?? Array.Empty<string>())
+                    result.Fields[header] = csv.GetField(header);
+            }
+        }
+        catch (InvalidOperationException) { throw; }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): Cannot read CSV file at '{path}'. Inner: {ex.Message}", ex);
         }
 
         return Task.FromResult(result);
@@ -55,19 +66,28 @@ public class CsvDataAdapter
             MissingFieldFound = null
         };
 
-        using var reader = new StreamReader(path);
-        using var csv = new CsvReader(reader, csvConfig);
-
-        // DS-6: guard empty file before ReadHeader()
-        if (!csv.Read()) return Task.FromResult<IEnumerable<DataResult>>(results);
-        csv.ReadHeader();
-
-        while (csv.Read())
+        try
         {
-            var row = new DataResult();
-            foreach (var header in csv.HeaderRecord ?? Array.Empty<string>())
-                row.Fields[header] = csv.GetField(header);
-            results.Add(row);
+            using var reader = new StreamReader(path);
+            using var csv = new CsvReader(reader, csvConfig);
+
+            // DS-6: guard empty file before ReadHeader()
+            if (!csv.Read()) return Task.FromResult<IEnumerable<DataResult>>(results);
+            csv.ReadHeader();
+
+            while (csv.Read())
+            {
+                var row = new DataResult();
+                foreach (var header in csv.HeaderRecord ?? Array.Empty<string>())
+                    row.Fields[header] = csv.GetField(header);
+                results.Add(row);
+            }
+        }
+        catch (InvalidOperationException) { throw; }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException(
+                $"DataSourceConfig '{config.Name}' (Id={config.Id}): Cannot read CSV file at '{path}'. Inner: {ex.Message}", ex);
         }
 
         return Task.FromResult<IEnumerable<DataResult>>(results);
