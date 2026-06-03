@@ -119,4 +119,25 @@ public class AlarmServiceGuardTests
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => svc.DeleteRuleAsync(id));
     }
+
+    // ── SA-2: SaveRuleAsync — null Condition guard ────────────────────────────
+    // Dapper can map a NULL DB column to null even when the model property has a default
+    // initialiser.  Before the fix, IsKnownCondition called null.Trim() and threw NRE.
+    // After the fix it must throw ArgumentException (invalid condition).
+
+    [Fact]
+    public async Task SaveRuleAsync_NullCondition_ThrowsArgumentException()
+    {
+        var svc  = CreateService();
+        var rule = new AlarmRule
+        {
+            EquipmentId        = 1,
+            DataSourceConfigId = 1,
+            Condition          = null!,   // simulate a NULL DB column mapped by Dapper
+            Threshold          = 10
+        };
+
+        // ThrowsAsync<ArgumentException> already proves no NRE is thrown
+        await Assert.ThrowsAsync<ArgumentException>(() => svc.SaveRuleAsync(rule));
+    }
 }

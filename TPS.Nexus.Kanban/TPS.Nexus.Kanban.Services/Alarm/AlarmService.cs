@@ -113,7 +113,7 @@ public class AlarmService : IAlarmService
                 AlarmRuleId   = rule.Id   // AS-1: stored for per-rule dedup
             };
 
-            using var conn = _db.CreateConnection();
+            await using var conn = _db.CreateConnection();
             record.Id = await conn.ExecuteScalarAsync<int>(
                 """
                 INSERT INTO kanban_alarm_records (EquipmentId, EquipmentName, Level, Message, TriggeredAt, AlarmRuleId)
@@ -139,7 +139,7 @@ public class AlarmService : IAlarmService
 
     public async Task<IEnumerable<AlarmRecord>> GetActiveAlarmsAsync()
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryAsync<AlarmRecord>(
             "SELECT * FROM kanban_alarm_records WHERE ResolvedAt IS NULL ORDER BY TriggeredAt DESC");
     }
@@ -151,7 +151,7 @@ public class AlarmService : IAlarmService
             throw new ArgumentOutOfRangeException(nameof(alarmRecordId),
                 $"alarmRecordId must be positive, got {alarmRecordId}.");
 
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         await conn.ExecuteAsync(
             "UPDATE kanban_alarm_records SET ResolvedAt=@Now WHERE Id=@Id",
             new { Now = DateTime.UtcNow, Id = alarmRecordId });
@@ -159,7 +159,7 @@ public class AlarmService : IAlarmService
 
     public async Task<IEnumerable<AlarmRule>> GetRulesAsync(int equipmentId)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryAsync<AlarmRule>(
             "SELECT * FROM kanban_alarm_rules WHERE EquipmentId=@EquipmentId",
             new { EquipmentId = equipmentId });
@@ -186,7 +186,7 @@ public class AlarmService : IAlarmService
             throw new ArgumentException(
                 $"AlarmRule.Threshold must be a finite number, got {rule.Threshold}.", nameof(rule));
 
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         if (rule.Id == 0)
             await conn.ExecuteAsync(
                 """
@@ -206,15 +206,17 @@ public class AlarmService : IAlarmService
             throw new ArgumentOutOfRangeException(nameof(ruleId),
                 $"ruleId must be positive, got {ruleId}.");
 
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         await conn.ExecuteAsync("DELETE FROM kanban_alarm_rules WHERE Id=@Id", new { Id = ruleId });
     }
 
     // A-7: centralise known condition strings so EvaluateCondition and the validator stay in sync
     private static readonly HashSet<string> KnownConditions = new() { ">", "<", ">=", "<=", "==", "!=" };
 
-    private static bool IsKnownCondition(string condition) =>
-        KnownConditions.Contains(condition.Trim());
+    // null guard: Dapper can map a NULL DB column to null even when the model property has a
+    // default initialiser (= string.Empty), so treat null as an unknown/invalid condition.
+    private static bool IsKnownCondition(string? condition) =>
+        condition != null && KnownConditions.Contains(condition.Trim());
 
     public static bool EvaluateCondition(string condition, double threshold, double value) =>
         condition.Trim() switch
@@ -234,7 +236,7 @@ public class AlarmService : IAlarmService
     // Now uses the AlarmRuleId column added to kanban_alarm_records for exact matching.
     private async Task<bool> HasActiveAlarmForRuleAsync(int equipmentId, int ruleId)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         var count = await conn.ExecuteScalarAsync<int>(
             """
             SELECT COUNT(1) FROM kanban_alarm_records
@@ -246,13 +248,13 @@ public class AlarmService : IAlarmService
 
     private async Task<IEnumerable<DataSourceConfig>> GetAllDataSourceConfigsAsync()
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryAsync<DataSourceConfig>("SELECT * FROM kanban_datasource_configs");
     }
 
     private async Task<DataSourceConfig?> GetDataSourceConfigAsync(int configId)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryFirstOrDefaultAsync<DataSourceConfig>(
             "SELECT * FROM kanban_datasource_configs WHERE Id=@Id", new { Id = configId });
     }

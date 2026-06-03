@@ -91,7 +91,13 @@
     {
         if (firstRender && IsEditMode)
         {
-            await JS.InvokeVoidAsync("kanbanDrag.init", "map-canvas", DotNetRef);
+            // W-17: JSException if the drag script hasn't loaded yet (e.g., slow network or
+            // script load order issue); catch so the page renders even if drag is unavailable.
+            try
+            {
+                await JS.InvokeVoidAsync("kanbanDrag.init", "map-canvas", DotNetRef);
+            }
+            catch (JSException) { }
         }
     }
 
@@ -102,8 +108,14 @@
         {
             while (await _pollTimer.WaitForNextTickAsync(ct))
             {
-                ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
-                await InvokeAsync(StateHasChanged);
+                // W-16: a DB exception here escapes the fire-and-forget task and becomes an
+                // UnobservedTaskException — swallow so the poll loop survives transient DB errors.
+                try
+                {
+                    ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch { }
             }
         }
         catch (OperationCanceledException) { }
@@ -134,7 +146,14 @@
     private async Task HandleWidgetClick(EquipmentWidget widget)
     {
         SelectedWidget = widget;
-        SelectedLinkConfigs = await EquipmentSvc.GetLinkConfigsAsync(widget.EquipmentId);
+        try
+        {
+            SelectedLinkConfigs = await EquipmentSvc.GetLinkConfigsAsync(widget.EquipmentId);
+        }
+        catch
+        {
+            SelectedLinkConfigs = Enumerable.Empty<EquipmentLinkConfig>();
+        }
         DrawerOpen = true;
     }
 

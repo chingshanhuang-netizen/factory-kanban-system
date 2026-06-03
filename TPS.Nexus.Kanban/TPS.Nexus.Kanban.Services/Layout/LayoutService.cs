@@ -20,12 +20,12 @@ public class LayoutService : ILayoutService
             throw new ArgumentOutOfRangeException(nameof(factoryMapId),
                 $"factoryMapId must be a positive integer, got {factoryMapId}.");
 
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         await conn.OpenAsync();
 
         // B-1 fix: wrap MAX + INSERT in a transaction with SELECT FOR UPDATE to prevent
         // concurrent requests from obtaining the same VersionNo for the same map.
-        using var tx = conn.BeginTransaction(IsolationLevel.RepeatableRead);
+        await using var tx = conn.BeginTransaction(IsolationLevel.RepeatableRead);
 
         // B-2 fix: verify the map exists before creating a version for it.
         var mapExists = await conn.ExecuteScalarAsync<int>(
@@ -73,12 +73,12 @@ public class LayoutService : ILayoutService
             throw new ArgumentOutOfRangeException(nameof(draftId),
                 $"draftId must be a positive integer, got {draftId}.");
 
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         await conn.OpenAsync();
 
         // B-3 fix: wrap archive + publish in a single transaction so the two UPDATEs are atomic.
         // RepeatableRead prevents a concurrent Publish from archiving the same row between our two statements.
-        using var tx = conn.BeginTransaction(IsolationLevel.RepeatableRead);
+        await using var tx = conn.BeginTransaction(IsolationLevel.RepeatableRead);
 
         var draft = await conn.QueryFirstOrDefaultAsync<LayoutVersion>(
             "SELECT * FROM kanban_layout_versions WHERE Id=@Id FOR UPDATE",
@@ -111,7 +111,7 @@ public class LayoutService : ILayoutService
 
     public async Task<IEnumerable<LayoutVersion>> GetVersionHistoryAsync(int mapId)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryAsync<LayoutVersion>(
             "SELECT * FROM kanban_layout_versions WHERE FactoryMapId=@MapId ORDER BY VersionNo DESC",
             new { MapId = mapId });
@@ -119,7 +119,7 @@ public class LayoutService : ILayoutService
 
     public async Task<LayoutVersion?> GetPublishedVersionAsync(int mapId)
     {
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         return await conn.QueryFirstOrDefaultAsync<LayoutVersion>(
             "SELECT * FROM kanban_layout_versions WHERE FactoryMapId=@MapId AND Status=@Status",
             new { MapId = mapId, Status = (byte)LayoutStatus.Published });
@@ -132,11 +132,11 @@ public class LayoutService : ILayoutService
             throw new ArgumentOutOfRangeException(nameof(versionId),
                 $"versionId must be a positive integer, got {versionId}.");
 
-        using var conn = _db.CreateConnection();
+        await using var conn = _db.CreateConnection();
         await conn.OpenAsync();
 
         // B-6 fix: same transaction pattern as PublishAsync — archive + re-publish must be atomic.
-        using var tx = conn.BeginTransaction(IsolationLevel.RepeatableRead);
+        await using var tx = conn.BeginTransaction(IsolationLevel.RepeatableRead);
 
         var target = await conn.QueryFirstOrDefaultAsync<LayoutVersion>(
             "SELECT * FROM kanban_layout_versions WHERE Id=@Id FOR UPDATE",

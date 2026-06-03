@@ -78,8 +78,14 @@
 
         HubConn.On<int, string, string>("ReceiveAlarm", async (_, _, _) =>
         {
-            await ReloadAlarms();
-            await InvokeAsync(StateHasChanged);
+            // W-14: an unhandled exception inside a SignalR receive callback silently kills
+            // the connection; catch to keep the hub alive even if the DB is temporarily down.
+            try
+            {
+                await ReloadAlarms();
+                await InvokeAsync(StateHasChanged);
+            }
+            catch { }
         });
 
         // W-2: StartAsync throws if the hub endpoint is unreachable; catch to avoid
@@ -97,9 +103,18 @@
     private async Task HandleSaveDraft()
     {
         if (CurrentMap == null) return;
-        var draft = await LayoutSvc.SaveDraftAsync(MapId, "{}", "CurrentUser");
-        DraftId = draft.Id;
-        NotifySvc.Notify(NotificationSeverity.Info, "草稿已儲存", $"v{draft.VersionNo}");
+        // W-15: SaveDraftAsync throws InvalidOperationException if the map no longer exists;
+        // catch to prevent the unhandled exception from disconnecting the Blazor circuit.
+        try
+        {
+            var draft = await LayoutSvc.SaveDraftAsync(MapId, "{}", "CurrentUser");
+            DraftId = draft.Id;
+            NotifySvc.Notify(NotificationSeverity.Info, "草稿已儲存", $"v{draft.VersionNo}");
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "草稿儲存失敗", ex.Message);
+        }
     }
 
     private async Task HandlePublish()
@@ -121,8 +136,12 @@
 
     private async Task HandleRollback()
     {
-        PublishedVersion = await LayoutSvc.GetPublishedVersionAsync(MapId);
-        await InvokeAsync(StateHasChanged);
+        try
+        {
+            PublishedVersion = await LayoutSvc.GetPublishedVersionAsync(MapId);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { }
     }
 
     private async Task ReloadAlarms()
