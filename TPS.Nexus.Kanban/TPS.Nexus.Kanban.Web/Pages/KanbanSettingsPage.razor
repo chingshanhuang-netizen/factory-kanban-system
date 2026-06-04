@@ -58,7 +58,7 @@
                                               Click="@(() => _equipGrid?.UpdateRow(eq) ?? Task.CompletedTask)" />
                                 <RadzenButton Text="取消" Size="ButtonSize.ExtraSmall"
                                               ButtonStyle="ButtonStyle.Light"
-                                              Click="@(() => { _equipGrid?.CancelEditRow(eq); })"
+                                              Click="@(() => CancelEquipmentEdit(eq))"
                                               Style="margin-left:4px" />
                             </EditTemplate>
                         </RadzenDataGridColumn>
@@ -101,7 +101,7 @@
                                               Click="@(() => _dsGrid?.UpdateRow(ds) ?? Task.CompletedTask)" />
                                 <RadzenButton Text="取消" Size="ButtonSize.ExtraSmall"
                                               ButtonStyle="ButtonStyle.Light"
-                                              Click="@(() => { _dsGrid?.CancelEditRow(ds); })"
+                                              Click="@(() => CancelDataSourceEdit(ds))"
                                               Style="margin-left:4px" />
                             </EditTemplate>
                         </RadzenDataGridColumn>
@@ -179,8 +179,11 @@
 
     private async Task AddEquipment()
     {
+        var eq = new Equipment { Name = "新設備" };
+        AllEquipment.Insert(0, eq);
+        await (_equipGrid?.Reload() ?? Task.CompletedTask);
         if (_equipGrid != null)
-            await _equipGrid.InsertRow(new Equipment { Name = "新設備" });
+            await _equipGrid.EditRow(eq);
     }
 
     private async Task OnEquipmentUpdate(Equipment eq)
@@ -192,10 +195,31 @@
             if (eq.Id == 0) await EquipmentSvc.CreateEquipmentAsync(eq);
             else await EquipmentSvc.UpdateEquipmentAsync(eq);
             await LoadAll();
+            await (_equipGrid?.Reload() ?? Task.CompletedTask);
         }
         catch (Exception ex)
         {
             NotifySvc.Notify(NotificationSeverity.Error, "儲存失敗", ex.Message);
+        }
+    }
+
+    private async Task CancelEquipmentEdit(Equipment eq)
+    {
+        _equipGrid?.CancelEditRow(eq);
+        if (eq.Id == 0)
+        {
+            AllEquipment.Remove(eq);
+            await (_equipGrid?.Reload() ?? Task.CompletedTask);
+        }
+    }
+
+    private async Task CancelDataSourceEdit(DataSourceConfig ds)
+    {
+        _dsGrid?.CancelEditRow(ds);
+        if (ds.Id == 0)
+        {
+            AllDataSources.Remove(ds);
+            await (_dsGrid?.Reload() ?? Task.CompletedTask);
         }
     }
 
@@ -205,6 +229,7 @@
         {
             await EquipmentSvc.DeleteEquipmentAsync(id);
             AllEquipment.RemoveAll(e => e.Id == id);
+            await (_equipGrid?.Reload() ?? Task.CompletedTask);
         }
         catch (Exception ex)
         {
@@ -214,8 +239,11 @@
 
     private async Task AddDataSource()
     {
+        var ds = new DataSourceConfig { Name = "新資料來源" };
+        AllDataSources.Insert(0, ds);
+        await (_dsGrid?.Reload() ?? Task.CompletedTask);
         if (_dsGrid != null)
-            await _dsGrid.InsertRow(new DataSourceConfig { Name = "新資料來源" });
+            await _dsGrid.EditRow(ds);
     }
 
     private async Task DeleteDataSource(int id)
@@ -224,6 +252,7 @@
         {
             await EquipmentSvc.DeleteDataSourceConfigAsync(id);
             AllDataSources.RemoveAll(d => d.Id == id);
+            await (_dsGrid?.Reload() ?? Task.CompletedTask);
         }
         catch (Exception ex)
         {
@@ -237,6 +266,7 @@
         {
             await EquipmentSvc.SaveDataSourceConfigAsync(ds);
             await LoadAll();
+            await (_dsGrid?.Reload() ?? Task.CompletedTask);
         }
         catch (Exception ex)
         {
