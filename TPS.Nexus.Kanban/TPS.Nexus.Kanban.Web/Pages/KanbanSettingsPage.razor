@@ -56,6 +56,10 @@
                                 <RadzenButton Text="儲存" Size="ButtonSize.ExtraSmall"
                                               ButtonStyle="ButtonStyle.Primary"
                                               Click="@(() => _equipGrid?.UpdateRow(eq) ?? Task.CompletedTask)" />
+                                <RadzenButton Text="取消" Size="ButtonSize.ExtraSmall"
+                                              ButtonStyle="ButtonStyle.Light"
+                                              Click="@(() => { _equipGrid?.CancelEditRow(eq); })"
+                                              Style="margin-left:4px" />
                             </EditTemplate>
                         </RadzenDataGridColumn>
                     </Columns>
@@ -67,7 +71,7 @@
                     <RadzenButton Text="+ 新增資料來源" ButtonStyle="ButtonStyle.Primary"
                                   Size="ButtonSize.Small" Click="@AddDataSource" />
                 </div>
-                <RadzenDataGrid Data="@AllDataSources" TItem="DataSourceConfig"
+                <RadzenDataGrid @ref="_dsGrid" Data="@AllDataSources" TItem="DataSourceConfig"
                                 EditMode="DataGridEditMode.Single"
                                 RowUpdate="@OnDataSourceUpdate">
                     <Columns>
@@ -80,6 +84,25 @@
                         <RadzenDataGridColumn TItem="DataSourceConfig" Property="QueryOrPath" Title="查詢/路徑">
                             <EditTemplate Context="ds">
                                 <RadzenTextArea @bind-Value="ds.QueryOrPath" Style="width:100%;height:60px" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="DataSourceConfig" Title="操作" Width="140px">
+                            <Template Context="ds">
+                                <RadzenButton Text="編輯" Size="ButtonSize.ExtraSmall"
+                                              Click="@(() => _dsGrid?.EditRow(ds) ?? Task.CompletedTask)" />
+                                <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Click="@(() => DeleteDataSource(ds.Id))"
+                                              Style="margin-left:4px" />
+                            </Template>
+                            <EditTemplate Context="ds">
+                                <RadzenButton Text="儲存" Size="ButtonSize.ExtraSmall"
+                                              ButtonStyle="ButtonStyle.Primary"
+                                              Click="@(() => _dsGrid?.UpdateRow(ds) ?? Task.CompletedTask)" />
+                                <RadzenButton Text="取消" Size="ButtonSize.ExtraSmall"
+                                              ButtonStyle="ButtonStyle.Light"
+                                              Click="@(() => { _dsGrid?.CancelEditRow(ds); })"
+                                              Style="margin-left:4px" />
                             </EditTemplate>
                         </RadzenDataGridColumn>
                     </Columns>
@@ -136,6 +159,7 @@
     private List<DataSourceConfig> AllDataSources = new();
     private List<FactoryMap> AllMaps = new();
     private RadzenDataGrid<Equipment>? _equipGrid;
+    private RadzenDataGrid<DataSourceConfig>? _dsGrid;
     private IBrowserFile? _iconFile;
     private string IconUploadResult = string.Empty;
 
@@ -153,9 +177,10 @@
         AllMaps        = (await MapImportSvc.GetAllAsync()).ToList();
     }
 
-    private void AddEquipment()
+    private async Task AddEquipment()
     {
-        AllEquipment.Insert(0, new Equipment { Name = "新設備" });
+        if (_equipGrid != null)
+            await _equipGrid.InsertRow(new Equipment { Name = "新設備" });
     }
 
     private async Task OnEquipmentUpdate(Equipment eq)
@@ -187,9 +212,23 @@
         }
     }
 
-    private void AddDataSource()
+    private async Task AddDataSource()
     {
-        AllDataSources.Insert(0, new DataSourceConfig { Name = "新資料來源" });
+        if (_dsGrid != null)
+            await _dsGrid.InsertRow(new DataSourceConfig { Name = "新資料來源" });
+    }
+
+    private async Task DeleteDataSource(int id)
+    {
+        try
+        {
+            await EquipmentSvc.DeleteDataSourceConfigAsync(id);
+            AllDataSources.RemoveAll(d => d.Id == id);
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "刪除資料來源失敗", ex.Message);
+        }
     }
 
     private async Task OnDataSourceUpdate(DataSourceConfig ds)
