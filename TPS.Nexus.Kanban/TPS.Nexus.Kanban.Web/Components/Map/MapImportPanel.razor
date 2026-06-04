@@ -36,14 +36,15 @@
     private string StatusMessage = string.Empty;
     private bool _isError;
 
-    private static readonly List<(string Label, MapFormatType Value)> FormatOptions = new()
+    private record FormatOption(string Label, MapFormatType Value);
+    private static readonly List<FormatOption> FormatOptions = new()
     {
-        ("PNG 圖片",       MapFormatType.Png),
-        ("JPG 圖片",       MapFormatType.Jpg),
-        ("SVG 向量圖",     MapFormatType.Svg),
-        ("DXF 工程圖",     MapFormatType.Dxf),
-        ("JSON 座標定義",  MapFormatType.JsonCoord),
-        ("XML 座標定義",   MapFormatType.XmlCoord),
+        new("PNG 圖片",      MapFormatType.Png),
+        new("JPG 圖片",      MapFormatType.Jpg),
+        new("SVG 向量圖",    MapFormatType.Svg),
+        new("DXF 工程圖",    MapFormatType.Dxf),
+        new("JSON 座標定義", MapFormatType.JsonCoord),
+        new("XML 座標定義",  MapFormatType.XmlCoord),
     };
 
     private void OnFileSelected(InputFileChangeEventArgs args)

@@ -9,9 +9,9 @@ public class DemoEquipmentService : IEquipmentService
 {
     private readonly List<EquipmentModel> _equipment = new()
     {
-        new() { Id=1, Name="CNC加工機",  Tag="CNC-01", Description="5軸加工中心",    IconType=IconType.CssClass },
-        new() { Id=2, Name="組裝機器人", Tag="ASM-01", Description="六軸工業機器人",   IconType=IconType.CssClass },
-        new() { Id=3, Name="品質檢測站", Tag="QC-01",  Description="3D視覺量測系統",   IconType=IconType.CssClass },
+        new() { Id=1, Name="CNC加工機",  Category="加工設備", Tag="CNC-01", Description="5軸加工中心",    IconType=IconType.CssClass },
+        new() { Id=2, Name="組裝機器人", Category="組裝設備", Tag="ASM-01", Description="六軸工業機器人",   IconType=IconType.CssClass },
+        new() { Id=3, Name="品質檢測站", Category="檢測設備", Tag="QC-01",  Description="3D視覺量測系統",   IconType=IconType.CssClass },
     };
 
     // Widgets placed at positions matching the three zones in demo-floor.svg

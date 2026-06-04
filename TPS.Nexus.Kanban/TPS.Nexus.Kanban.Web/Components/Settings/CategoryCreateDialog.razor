@@ -1,0 +1,63 @@
+@inject NotificationService NotifySvc
+@inject DialogService DialogSvc
+
+<RadzenStack Gap="16px" Style="padding:4px;min-width:360px">
+
+    @if (ExistingCategories.Count > 0)
+    {
+        <div>
+            <div style="color:#aaa;font-size:0.82em;margin-bottom:8px">現有類別</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+                @foreach (var cat in ExistingCategories)
+                {
+                    <span style="padding:4px 12px;background:rgba(255,255,255,.08);
+                                 border-radius:12px;font-size:0.85em;color:#ddd;
+                                 white-space:nowrap">@cat</span>
+                }
+            </div>
+        </div>
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,.1);margin:0" />
+    }
+
+    <RadzenFormField Text="新類別名稱 *" Variant="Variant.Outlined">
+        <RadzenTextBox @bind-Value="_name"
+                       Placeholder="例如：組裝設備"
+                       Style="width:100%"
+                       @onkeydown="@OnKeyDown" />
+    </RadzenFormField>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+        <RadzenButton Text="取消" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />
+        <RadzenButton Text="新增" ButtonStyle="ButtonStyle.Primary" Click="@Save" />
+    </div>
+
+</RadzenStack>
+
+@code {
+    [Parameter] public List<string> ExistingCategories { get; set; } = new();
+
+    private string _name = string.Empty;
+
+    private void Cancel() => DialogSvc.Close(null);
+
+    private void Save()
+    {
+        var trimmed = _name.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            NotifySvc.Notify(NotificationSeverity.Warning, "請輸入類別名稱");
+            return;
+        }
+        if (ExistingCategories.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
+        {
+            NotifySvc.Notify(NotificationSeverity.Warning, "類別已存在", $"「{trimmed}」已在清單中");
+            return;
+        }
+        DialogSvc.Close(trimmed);
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") Save();
+    }
+}

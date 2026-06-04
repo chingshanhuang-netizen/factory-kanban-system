@@ -7,6 +7,7 @@
 @inject DialogService DialogSvc
 @inject IIconGalleryService GallerySvc
 @inject IOptions<KanbanModuleOptions> ModuleOpts
+@inject IJSRuntime JS
 
 <PageTitle>看板設定</PageTitle>
 
@@ -21,81 +22,170 @@
 
     <RadzenTabs>
         <Tabs>
+
+            <!-- ── 設備管理 ─────────────────────────────────────────────── -->
             <RadzenTabsItem Text="設備管理">
-                <div style="margin-bottom:12px">
+                <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">
+                    <RadzenButton Text="+ 新增類別" ButtonStyle="ButtonStyle.Secondary"
+                                  Size="ButtonSize.Small" Click="@AddCategory" />
                     <RadzenButton Text="+ 新增設備" ButtonStyle="ButtonStyle.Primary"
                                   Size="ButtonSize.Small" Click="@AddEquipment" />
+                    <RadzenButton Icon="settings" Text="欄位設定"
+                                  ButtonStyle="@(_showEquipCols ? ButtonStyle.Info : ButtonStyle.Light)"
+                                  Size="ButtonSize.Small"
+                                  Click="@(() => _showEquipCols = !_showEquipCols)" />
                 </div>
-                <RadzenDataGrid @ref="_equipGrid" Data="@AllEquipment" TItem="Equipment">
+
+                @if (_showEquipCols)
+                {
+                    <ColumnSettingsPanel Prefs="@_equipCols"
+                                         OnReordered="@(() => _equipGridKey++)" />
+                }
+
+                <RadzenDataGrid @key="@_equipGridKey" @ref="_equipGrid"
+                                Data="@AllEquipment" TItem="Equipment"
+                                AllowColumnResize="true"
+                                ColumnResized="@OnEquipColResized">
                     <Columns>
-                        <RadzenDataGridColumn TItem="Equipment" Property="Name" Title="名稱" />
-                        <RadzenDataGridColumn TItem="Equipment" Property="Tag" Title="標籤" />
-                        <RadzenDataGridColumn TItem="Equipment" Title="圖示" Width="80px">
-                            <Template Context="eq">
-                                <EquipmentIconRenderer Equipment="@eq" />
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="Equipment" Title="操作" Width="120px">
-                            <Template Context="eq">
-                                <RadzenButton Text="編輯" Size="ButtonSize.ExtraSmall"
-                                              Click="@(() => EditEquipment(eq))" />
-                                <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
-                                              ButtonStyle="ButtonStyle.Danger"
-                                              Click="@(() => DeleteEquipment(eq.Id))"
-                                              Style="margin-left:4px" />
-                            </Template>
-                        </RadzenDataGridColumn>
+                        @foreach (var colId in _equipCols.Order)
+                        {
+                            if (colId == "name")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="Equipment"
+                                                      Property="Name" Title="名稱"
+                                                      Width="@_equipCols.Width("name")" MinWidth="80px" />
+                            }
+                            else if (colId == "category")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="Equipment"
+                                                      Property="Category" Title="類別"
+                                                      Width="@_equipCols.Width("category")" MinWidth="80px" />
+                            }
+                            else if (colId == "tag")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="Equipment"
+                                                      Property="Tag" Title="標籤"
+                                                      Width="@_equipCols.Width("tag")" MinWidth="60px" />
+                            }
+                            else if (colId == "icon")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="Equipment"
+                                                      Title="圖示"
+                                                      Width="@_equipCols.Width("icon")"
+                                                      Resizable="false">
+                                    <Template Context="eq">
+                                        <EquipmentIconRenderer Equipment="@eq" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            }
+                            else if (colId == "actions")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="Equipment"
+                                                      Title="操作"
+                                                      Width="@_equipCols.Width("actions")"
+                                                      Resizable="false">
+                                    <Template Context="eq">
+                                        <RadzenButton Text="編輯" Size="ButtonSize.ExtraSmall"
+                                                      Click="@(() => EditEquipment(eq))" />
+                                        <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
+                                                      ButtonStyle="ButtonStyle.Danger"
+                                                      Click="@(() => DeleteEquipment(eq.Id))"
+                                                      Style="margin-left:4px" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            }
+                        }
                     </Columns>
                 </RadzenDataGrid>
             </RadzenTabsItem>
 
+            <!-- ── 資料來源 ─────────────────────────────────────────────── -->
             <RadzenTabsItem Text="資料來源">
-                <div style="margin-bottom:12px">
+                <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">
                     <RadzenButton Text="+ 新增資料來源" ButtonStyle="ButtonStyle.Primary"
                                   Size="ButtonSize.Small" Click="@AddDataSource" />
+                    <RadzenButton Icon="settings" Text="欄位設定"
+                                  ButtonStyle="@(_showDsCols ? ButtonStyle.Info : ButtonStyle.Light)"
+                                  Size="ButtonSize.Small"
+                                  Click="@(() => _showDsCols = !_showDsCols)" />
                 </div>
-                <RadzenDataGrid @ref="_dsGrid" Data="@AllDataSources" TItem="DataSourceConfig"
+
+                @if (_showDsCols)
+                {
+                    <ColumnSettingsPanel Prefs="@_dsCols"
+                                         OnReordered="@(() => _dsGridKey++)" />
+                }
+
+                <RadzenDataGrid @key="@_dsGridKey" @ref="_dsGrid"
+                                Data="@AllDataSources" TItem="DataSourceConfig"
+                                AllowColumnResize="true"
+                                ColumnResized="@OnDsColResized"
                                 EditMode="DataGridEditMode.Single"
                                 RowUpdate="@OnDataSourceUpdate">
                     <Columns>
-                        <RadzenDataGridColumn TItem="DataSourceConfig" Property="Name" Title="名稱">
-                            <EditTemplate Context="ds">
-                                <RadzenTextBox @bind-Value="ds.Name" Style="width:100%" />
-                            </EditTemplate>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="DataSourceConfig" Property="SourceType" Title="類型" Width="80px" />
-                        <RadzenDataGridColumn TItem="DataSourceConfig" Property="QueryOrPath" Title="查詢/路徑">
-                            <EditTemplate Context="ds">
-                                <RadzenTextArea @bind-Value="ds.QueryOrPath" Style="width:100%;height:60px" />
-                            </EditTemplate>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="DataSourceConfig" Title="操作" Width="140px">
-                            <Template Context="ds">
-                                <RadzenButton Text="編輯" Size="ButtonSize.ExtraSmall"
-                                              Click="@(() => _dsGrid?.EditRow(ds) ?? Task.CompletedTask)" />
-                                <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
-                                              ButtonStyle="ButtonStyle.Danger"
-                                              Click="@(() => DeleteDataSource(ds.Id))"
-                                              Style="margin-left:4px" />
-                            </Template>
-                            <EditTemplate Context="ds">
-                                <RadzenButton Text="儲存" Size="ButtonSize.ExtraSmall"
-                                              ButtonStyle="ButtonStyle.Primary"
-                                              Click="@(() => _dsGrid?.UpdateRow(ds) ?? Task.CompletedTask)" />
-                                <RadzenButton Text="取消" Size="ButtonSize.ExtraSmall"
-                                              ButtonStyle="ButtonStyle.Light"
-                                              Click="@(() => CancelDataSourceEdit(ds))"
-                                              Style="margin-left:4px" />
-                            </EditTemplate>
-                        </RadzenDataGridColumn>
+                        @foreach (var colId in _dsCols.Order)
+                        {
+                            if (colId == "name")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="DataSourceConfig"
+                                                      Property="Name" Title="名稱"
+                                                      Width="@_dsCols.Width("name")" MinWidth="80px">
+                                    <EditTemplate Context="ds">
+                                        <RadzenTextBox @bind-Value="ds.Name" Style="width:100%" />
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                            }
+                            else if (colId == "sourceType")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="DataSourceConfig"
+                                                      Property="SourceType" Title="類型"
+                                                      Width="@_dsCols.Width("sourceType")" MinWidth="60px" />
+                            }
+                            else if (colId == "queryOrPath")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="DataSourceConfig"
+                                                      Property="QueryOrPath" Title="查詢/路徑"
+                                                      Width="@_dsCols.Width("queryOrPath")" MinWidth="80px">
+                                    <EditTemplate Context="ds">
+                                        <RadzenTextArea @bind-Value="ds.QueryOrPath"
+                                                        Style="width:100%;height:60px" />
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                            }
+                            else if (colId == "actions")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="DataSourceConfig"
+                                                      Title="操作"
+                                                      Width="@_dsCols.Width("actions")"
+                                                      Resizable="false">
+                                    <Template Context="ds">
+                                        <RadzenButton Text="編輯" Size="ButtonSize.ExtraSmall"
+                                                      Click="@(() => _dsGrid?.EditRow(ds) ?? Task.CompletedTask)" />
+                                        <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
+                                                      ButtonStyle="ButtonStyle.Danger"
+                                                      Click="@(() => DeleteDataSource(ds.Id))"
+                                                      Style="margin-left:4px" />
+                                    </Template>
+                                    <EditTemplate Context="ds">
+                                        <RadzenButton Text="儲存" Size="ButtonSize.ExtraSmall"
+                                                      ButtonStyle="ButtonStyle.Primary"
+                                                      Click="@(() => _dsGrid?.UpdateRow(ds) ?? Task.CompletedTask)" />
+                                        <RadzenButton Text="取消" Size="ButtonSize.ExtraSmall"
+                                                      ButtonStyle="ButtonStyle.Light"
+                                                      Click="@(() => CancelDataSourceEdit(ds))"
+                                                      Style="margin-left:4px" />
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                            }
+                        }
                     </Columns>
                 </RadzenDataGrid>
             </RadzenTabsItem>
 
+            <!-- ── 圖示上傳 ─────────────────────────────────────────────── -->
             <RadzenTabsItem Text="圖示上傳">
                 <div style="display:flex;flex-direction:column;gap:16px;padding:4px 0;max-width:720px">
 
-                    <!-- Upload new icon -->
                     <RadzenCard>
                         <RadzenText TextStyle="TextStyle.Subtitle1" Style="margin-bottom:12px">上傳新圖示</RadzenText>
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -118,7 +208,6 @@
                         }
                     </RadzenCard>
 
-                    <!-- Icon gallery -->
                     <RadzenCard>
                         <RadzenText TextStyle="TextStyle.Subtitle1" Style="margin-bottom:4px">
                             圖示庫
@@ -127,7 +216,6 @@
                                 <span style="color:#aaa;font-size:0.82em;margin-left:6px">（共 @_allGalleryIcons.Count 個，點選後可套用到設備）</span>
                             }
                         </RadzenText>
-
                         @if (_allGalleryIcons.Count == 0)
                         {
                             <p style="color:#666;font-size:0.85em;margin:8px 0 0">尚無圖示，請先上傳。</p>
@@ -152,43 +240,74 @@
                         }
                     </RadzenCard>
 
-                    <!-- Apply selected icon to equipment -->
                     @if (!string.IsNullOrEmpty(_selectedGalleryUrl))
                     {
                         <RadzenCard>
-                            <RadzenText TextStyle="TextStyle.Subtitle1" Style="margin-bottom:8px">套用到設備</RadzenText>
-                            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
                                 <img src="@_selectedGalleryUrl" alt="已選圖示"
-                                     style="width:48px;height:48px;object-fit:contain;
+                                     style="width:48px;height:48px;object-fit:contain;flex-shrink:0;
                                             background:rgba(255,255,255,.06);border-radius:4px;padding:4px;
-                                            border:2px solid #4caf50;flex-shrink:0" />
-                                <RadzenDropDown @bind-Value="_assignTargetId"
-                                                Data="@AllEquipment"
-                                                TextProperty="Name"
-                                                ValueProperty="Id"
-                                                TValue="int"
-                                                Placeholder="選擇設備..."
-                                                Style="flex:1;min-width:160px" />
-                                <RadzenButton Text="套用" ButtonStyle="ButtonStyle.Success"
-                                              Size="ButtonSize.Small"
-                                              Disabled="@(_assignTargetId == 0)"
-                                              Click="@AssignIconToEquipment" />
+                                            border:2px solid #4caf50" />
+                                <RadzenText TextStyle="TextStyle.Subtitle1">套用到</RadzenText>
+                                <RadzenRadioButtonList @bind-Value="_assignToCategory"
+                                                       TValue="bool"
+                                                       Orientation="Orientation.Horizontal">
+                                    <Items>
+                                        <RadzenRadioButtonListItem Text="設備類別" Value="@true" />
+                                        <RadzenRadioButtonListItem Text="指定設備" Value="@false" />
+                                    </Items>
+                                </RadzenRadioButtonList>
                             </div>
-                            @if (_assignTargetId > 0)
+                            @if (_assignToCategory)
                             {
-                                var targetEq = AllEquipment.FirstOrDefault(e => e.Id == _assignTargetId);
-                                if (targetEq != null)
+                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                                    <RadzenDropDown @bind-Value="_assignCategoryName"
+                                                    Data="@_allCategories" TValue="string"
+                                                    Placeholder="選擇類別..."
+                                                    Style="flex:1;min-width:160px" />
+                                    <RadzenButton Text="套用到此類別" ButtonStyle="ButtonStyle.Success"
+                                                  Size="ButtonSize.Small"
+                                                  Disabled="@string.IsNullOrEmpty(_assignCategoryName)"
+                                                  Click="@AssignIconToCategory" />
+                                </div>
+                                @if (!string.IsNullOrEmpty(_assignCategoryName))
                                 {
-                                    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;
-                                                padding:8px;background:rgba(255,255,255,.04);border-radius:4px;
-                                                font-size:0.85em;color:#aaa">
-                                        <span>目前：</span>
-                                        <EquipmentIconRenderer Equipment="@targetEq" />
-                                        <span>→</span>
-                                        <img src="@_selectedGalleryUrl"
-                                             style="width:1.5em;height:1.5em;object-fit:contain" />
-                                        <span>@targetEq.Name</span>
+                                    var count = AllEquipment.Count(e => e.Category == _assignCategoryName);
+                                    <div style="margin-top:8px;font-size:0.82em;color:#aaa">
+                                        將套用到「@_assignCategoryName」類別共 @count 台設備
                                     </div>
+                                }
+                            }
+                            else
+                            {
+                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                                    <RadzenDropDown @bind-Value="_assignTargetId"
+                                                    Data="@_equipmentDisplayItems"
+                                                    TextProperty="DisplayText" ValueProperty="Id"
+                                                    TValue="int"
+                                                    Placeholder="選擇設備..."
+                                                    Style="flex:1;min-width:200px" />
+                                    <RadzenButton Text="套用" ButtonStyle="ButtonStyle.Success"
+                                                  Size="ButtonSize.Small"
+                                                  Disabled="@(_assignTargetId == 0)"
+                                                  Click="@AssignIconToEquipment" />
+                                </div>
+                                @if (_assignTargetId > 0)
+                                {
+                                    var targetEq = AllEquipment.FirstOrDefault(e => e.Id == _assignTargetId);
+                                    if (targetEq != null)
+                                    {
+                                        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;
+                                                    padding:8px;background:rgba(255,255,255,.04);border-radius:4px;
+                                                    font-size:0.85em;color:#aaa">
+                                            <span>目前：</span>
+                                            <EquipmentIconRenderer Equipment="@targetEq" />
+                                            <span>→</span>
+                                            <img src="@_selectedGalleryUrl"
+                                                 style="width:1.5em;height:1.5em;object-fit:contain" />
+                                            <span>@targetEq.Name</span>
+                                        </div>
+                                    }
                                 }
                             }
                         </RadzenCard>
@@ -197,50 +316,154 @@
                 </div>
             </RadzenTabsItem>
 
+            <!-- ── 地圖管理 ─────────────────────────────────────────────── -->
             <RadzenTabsItem Text="地圖管理">
                 <MapImportPanel OnImported="@OnMapImported" />
                 <div style="margin-top:16px">
-                    <RadzenText TextStyle="TextStyle.Subtitle1">已匯入地圖</RadzenText>
-                    <RadzenDataGrid Data="@AllMaps" TItem="FactoryMap" Style="margin-top:8px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                        <RadzenText TextStyle="TextStyle.Subtitle1">已匯入地圖</RadzenText>
+                        <RadzenButton Icon="settings" Text="欄位設定"
+                                      ButtonStyle="@(_showMapCols ? ButtonStyle.Info : ButtonStyle.Light)"
+                                      Size="ButtonSize.Small"
+                                      Click="@(() => _showMapCols = !_showMapCols)" />
+                    </div>
+
+                    @if (_showMapCols)
+                    {
+                        <ColumnSettingsPanel Prefs="@_mapCols"
+                                             OnReordered="@(() => _mapGridKey++)" />
+                    }
+
+                    <RadzenDataGrid @key="@_mapGridKey" Data="@AllMaps" TItem="FactoryMap"
+                                    AllowColumnResize="true"
+                                    ColumnResized="@OnMapColResized">
                         <Columns>
-                            <RadzenDataGridColumn TItem="FactoryMap" Property="Name" Title="名稱" />
-                            <RadzenDataGridColumn TItem="FactoryMap" Property="FormatType" Title="格式" Width="80px" />
-                            <RadzenDataGridColumn TItem="FactoryMap" Property="CreatedAt" Title="建立時間"
-                                                  FormatString="{0:yyyy-MM-dd}" Width="100px" />
-                            <RadzenDataGridColumn TItem="FactoryMap" Title="操作" Width="80px">
-                                <Template Context="m">
-                                    <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
-                                                  ButtonStyle="ButtonStyle.Danger"
-                                                  Click="@(() => DeleteMap(m.Id))" />
-                                </Template>
-                            </RadzenDataGridColumn>
+                            @foreach (var colId in _mapCols.Order)
+                            {
+                                if (colId == "name")
+                                {
+                                    <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
+                                                          Property="Name" Title="名稱"
+                                                          Width="@_mapCols.Width("name")" MinWidth="80px" />
+                                }
+                                else if (colId == "formatType")
+                                {
+                                    <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
+                                                          Property="FormatType" Title="格式"
+                                                          Width="@_mapCols.Width("formatType")" MinWidth="60px" />
+                                }
+                                else if (colId == "createdAt")
+                                {
+                                    <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
+                                                          Property="CreatedAt" Title="建立時間"
+                                                          FormatString="{0:yyyy-MM-dd}"
+                                                          Width="@_mapCols.Width("createdAt")" MinWidth="80px" />
+                                }
+                                else if (colId == "actions")
+                                {
+                                    <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
+                                                          Title="操作"
+                                                          Width="@_mapCols.Width("actions")"
+                                                          Resizable="false">
+                                        <Template Context="m">
+                                            <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
+                                                          ButtonStyle="ButtonStyle.Danger"
+                                                          Click="@(() => DeleteMap(m.Id))" />
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                }
+                            }
                         </Columns>
                     </RadzenDataGrid>
                 </div>
             </RadzenTabsItem>
+
         </Tabs>
     </RadzenTabs>
 </div>
 
 @code {
     private bool CanSettings;
-    private List<Equipment> AllEquipment = new();
+    private List<Equipment>        AllEquipment   = new();
     private List<DataSourceConfig> AllDataSources = new();
-    private List<FactoryMap> AllMaps = new();
-    private RadzenDataGrid<Equipment>? _equipGrid;
+    private List<FactoryMap>       AllMaps        = new();
+    private RadzenDataGrid<Equipment>?        _equipGrid;
     private RadzenDataGrid<DataSourceConfig>? _dsGrid;
+
     private byte[]? _iconFileBytes;
-    private string _iconFileName = string.Empty;
-    private string _localPreviewUrl = string.Empty;
+    private string  _iconFileName    = string.Empty;
+    private string  _localPreviewUrl = string.Empty;
     private List<string> _allGalleryIcons = new();
-    private string _selectedGalleryUrl = string.Empty;
-    private int _assignTargetId;
+    private string  _selectedGalleryUrl  = string.Empty;
+    private bool    _assignToCategory;
+    private string  _assignCategoryName = string.Empty;
+    private int     _assignTargetId;
+    private List<string> _extraCategories = new();
+
+    // ── Column preferences (one instance per grid, keyed to localStorage) ─
+    private readonly GridColumnPrefs _equipCols = new("kanban:equip-grid-v1", new[]
+    {
+        new GridColumnPrefs.ColDef("name",     "名稱"),
+        new GridColumnPrefs.ColDef("category", "類別"),
+        new GridColumnPrefs.ColDef("tag",      "標籤"),
+        new GridColumnPrefs.ColDef("icon",     "圖示",    64,  false),
+        new GridColumnPrefs.ColDef("actions",  "操作",   120,  false),
+    });
+    private readonly GridColumnPrefs _dsCols = new("kanban:ds-grid-v1", new[]
+    {
+        new GridColumnPrefs.ColDef("name",        "名稱"),
+        new GridColumnPrefs.ColDef("sourceType",  "類型",    80),
+        new GridColumnPrefs.ColDef("queryOrPath", "查詢/路徑"),
+        new GridColumnPrefs.ColDef("actions",     "操作",   140, false),
+    });
+    private readonly GridColumnPrefs _mapCols = new("kanban:map-grid-v1", new[]
+    {
+        new GridColumnPrefs.ColDef("name",       "名稱"),
+        new GridColumnPrefs.ColDef("formatType", "格式",    80),
+        new GridColumnPrefs.ColDef("createdAt",  "建立時間",100),
+        new GridColumnPrefs.ColDef("actions",    "操作",    80, false),
+    });
+
+    private bool _showEquipCols;
+    private bool _showDsCols;
+    private bool _showMapCols;
+    private int  _equipGridKey;
+    private int  _dsGridKey;
+    private int  _mapGridKey;
+    private bool _prefsLoaded;
+    // ──────────────────────────────────────────────────────────────────────
+
+    private IEnumerable<string> _allCategories => AllEquipment
+        .Where(e => !string.IsNullOrEmpty(e.Category))
+        .Select(e => e.Category!)
+        .Union(_extraCategories)
+        .Distinct()
+        .OrderBy(c => c);
+
+    private record EquipmentDisplayItem(int Id, string DisplayText);
+    private IEnumerable<EquipmentDisplayItem> _equipmentDisplayItems => AllEquipment
+        .Select(e => new EquipmentDisplayItem(
+            e.Id,
+            string.Join(".", new[] { e.Category, e.Name, e.Tag }
+                .Where(s => !string.IsNullOrEmpty(s)))));
 
     protected override async Task OnInitializedAsync()
     {
         CanSettings = await PermSvc.HasPermissionAsync(KanbanPermissions.Settings);
         if (!CanSettings) return;
         await LoadAll();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && CanSettings && !_prefsLoaded)
+        {
+            _prefsLoaded = true;
+            await _equipCols.LoadAsync(JS);
+            await _dsCols.LoadAsync(JS);
+            await _mapCols.LoadAsync(JS);
+            StateHasChanged();
+        }
     }
 
     private async Task LoadAll()
@@ -260,22 +483,100 @@
         _allGalleryIcons = fromGallery.Union(fromEquipment).ToList();
     }
 
+    // ── Column resize: save width immediately to localStorage ──────────────
+    private static string TitleToId(string? title) => title switch
+    {
+        "名稱"      => "name",
+        "類別"      => "category",
+        "標籤"      => "tag",
+        "圖示"      => "icon",
+        "格式"      => "formatType",
+        "建立時間"  => "createdAt",
+        "類型"      => "sourceType",
+        "查詢/路徑" => "queryOrPath",
+        "操作"      => "actions",
+        _           => title ?? string.Empty,
+    };
+
+    private async Task OnEquipColResized(DataGridColumnResizedEventArgs<Equipment> args)
+    {
+        _equipCols.SetWidth(TitleToId(args.Column.Title), args.Width);
+        await _equipCols.SaveAsync(JS);
+    }
+
+    private async Task OnDsColResized(DataGridColumnResizedEventArgs<DataSourceConfig> args)
+    {
+        _dsCols.SetWidth(TitleToId(args.Column.Title), args.Width);
+        await _dsCols.SaveAsync(JS);
+    }
+
+    private async Task OnMapColResized(DataGridColumnResizedEventArgs<FactoryMap> args)
+    {
+        _mapCols.SetWidth(TitleToId(args.Column.Title), args.Width);
+        await _mapCols.SaveAsync(JS);
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     private void SelectGalleryIcon(string url)
     {
         _selectedGalleryUrl = url;
         _assignTargetId     = 0;
+        _assignCategoryName = string.Empty;
+    }
+
+    private async Task AssignIconToCategory()
+    {
+        if (string.IsNullOrEmpty(_assignCategoryName) || string.IsNullOrEmpty(_selectedGalleryUrl)) return;
+        var toUpdate = AllEquipment.Where(e => e.Category == _assignCategoryName).ToList();
+        if (toUpdate.Count == 0) return;
+        try
+        {
+            foreach (var eq in toUpdate)
+            {
+                eq.IconType  = IconType.CustomImage;
+                eq.IconValue = _selectedGalleryUrl;
+                await EquipmentSvc.UpdateEquipmentAsync(eq);
+            }
+            AllEquipment = (await EquipmentSvc.GetAllEquipmentAsync()).ToList();
+            await (_equipGrid?.Reload() ?? Task.CompletedTask);
+            await RefreshGallery();
+            NotifySvc.Notify(NotificationSeverity.Success, "圖示已套用",
+                $"已套用至「{_assignCategoryName}」共 {toUpdate.Count} 台設備");
+            _assignCategoryName = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "套用圖示失敗", ex.Message);
+        }
+    }
+
+    private async Task AddCategory()
+    {
+        var result = await DialogSvc.OpenAsync<CategoryCreateDialog>(
+            "新增類別",
+            new Dictionary<string, object> { { "ExistingCategories", _allCategories.ToList() } },
+            new DialogOptions { Width = "420px", CloseDialogOnOverlayClick = false, Draggable = true });
+        if (result is string name && !string.IsNullOrWhiteSpace(name)
+            && !_extraCategories.Contains(name))
+        {
+            _extraCategories.Add(name);
+            NotifySvc.Notify(NotificationSeverity.Success, "類別已新增", $"「{name}」已加入類別清單");
+        }
     }
 
     private Task AddEquipment() => OpenEquipmentDialog(new Equipment());
-
     private Task EditEquipment(Equipment eq) => OpenEquipmentDialog(eq);
 
     private async Task OpenEquipmentDialog(Equipment eq)
     {
         var saved = await DialogSvc.OpenAsync<EquipmentEditDialog>(
             eq.Id == 0 ? "新增設備" : "編輯設備",
-            new Dictionary<string, object> { { "Equipment", eq } },
-            new DialogOptions { Width = "480px", CloseDialogOnOverlayClick = false });
+            new Dictionary<string, object>
+            {
+                { "Equipment",        eq              },
+                { "ExtraCategories",  _extraCategories },
+            },
+            new DialogOptions { Width = "480px", CloseDialogOnOverlayClick = false, Draggable = true });
         if (saved is true)
         {
             AllEquipment = (await EquipmentSvc.GetAllEquipmentAsync()).ToList();
@@ -346,14 +647,14 @@
 
     private async Task OnIconFileSelected(InputFileChangeEventArgs args)
     {
-        var file            = args.File;
-        _iconFileBytes      = null;
-        _iconFileName       = string.Empty;
-        _localPreviewUrl    = string.Empty;
-        _assignTargetId     = 0;
+        var file         = args.File;
+        _iconFileBytes   = null;
+        _iconFileName    = string.Empty;
+        _localPreviewUrl = string.Empty;
+        _assignTargetId  = 0;
         try
         {
-            // Read into memory immediately — IBrowserFile JS reference becomes invalid after re-render
+            // Read immediately — IBrowserFile JS ref becomes invalid after re-render
             await using var src = file.OpenReadStream(maxAllowedSize: ModuleOpts.Value.IconUploadMaxBytes);
             using var ms        = new MemoryStream();
             await src.CopyToAsync(ms);
@@ -380,7 +681,7 @@
             _iconFileBytes      = null;
             _iconFileName       = string.Empty;
             await RefreshGallery();
-            _selectedGalleryUrl = url;   // auto-select the just-uploaded icon
+            _selectedGalleryUrl = url;
             _assignTargetId     = 0;
             StateHasChanged();
             NotifySvc.Notify(NotificationSeverity.Success, "圖示已上傳，已加入圖示庫");
@@ -414,10 +715,7 @@
 
     private async Task OnMapImported(FactoryMap map)
     {
-        try
-        {
-            AllMaps = (await MapImportSvc.GetAllAsync()).ToList();
-        }
+        try { AllMaps = (await MapImportSvc.GetAllAsync()).ToList(); }
         catch { }
     }
 

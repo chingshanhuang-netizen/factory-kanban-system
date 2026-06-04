@@ -11,6 +11,16 @@
         <RadzenTextBox @bind-Value="_edit.Name" Style="width:100%" />
     </RadzenFormField>
 
+    <RadzenFormField Text="設備類別" Variant="Variant.Outlined">
+        <RadzenDropDown @bind-Value="_edit.Category"
+                        Data="@_categories"
+                        AllowClear="true"
+                        AllowFiltering="true"
+                        Placeholder="選擇或輸入類別..."
+                        Style="width:100%"
+                        Change="@(() => StateHasChanged())" />
+    </RadzenFormField>
+
     <RadzenFormField Text="標籤" Variant="Variant.Outlined">
         <RadzenTextBox @bind-Value="_edit.Tag" Style="width:100%" />
     </RadzenFormField>
@@ -19,7 +29,7 @@
         <RadzenTextBox @bind-Value="_edit.Description" Style="width:100%" />
     </RadzenFormField>
 
-    <RadzenFormField Text="圖示類型" Variant="Variant.Outlined">
+    <RadzenFormField Text="設備圖示" Variant="Variant.Outlined">
         <RadzenDropDown @bind-Value="_edit.IconType"
                         Data="@_iconTypeOptions"
                         TextProperty="Label"
@@ -112,6 +122,7 @@
 
 @code {
     [Parameter] public Equipment Equipment { get; set; } = new();
+    [Parameter] public List<string> ExtraCategories { get; set; } = new();
 
     private Equipment _edit = new();
     private byte[]? _iconFileBytes;
@@ -119,6 +130,7 @@
     private string _localPreviewUrl = string.Empty;
     private bool _uploading;
     private List<string> _galleryIcons = new();
+    private List<string> _categories  = new();
 
     private record IconTypeOption(string Label, IconType Value);
     private static readonly List<IconTypeOption> _iconTypeOptions = new()
@@ -129,6 +141,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var all = await EquipmentSvc.GetAllEquipmentAsync();
+        _categories = all
+            .Where(e => !string.IsNullOrEmpty(e.Category))
+            .Select(e => e.Category!)
+            .Union(ExtraCategories)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
         await RefreshGallery();
     }
 
@@ -147,6 +167,7 @@
         {
             Id          = Equipment.Id,
             Name        = Equipment.Name,
+            Category    = Equipment.Category,
             Tag         = Equipment.Tag,
             Description = Equipment.Description,
             IconType    = Equipment.IconType,

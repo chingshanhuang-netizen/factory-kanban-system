@@ -1,0 +1,70 @@
+@inject IJSRuntime JS
+@using TPS.Nexus.Kanban.Web.Services
+
+<div style="padding:10px 14px;background:rgba(255,255,255,.04);border-radius:6px;
+            margin-bottom:10px;border:1px solid rgba(255,255,255,.12)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="color:#aaa;font-size:0.82em">拖曳調整欄位順序</span>
+        <RadzenButton Text="重設預設" ButtonStyle="ButtonStyle.Light"
+                      Size="ButtonSize.ExtraSmall" Click="@Reset" />
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        @foreach (var (colId, idx) in Prefs!.Order.Select((id, i) => (id, i)))
+        {
+            var col = Prefs.Defaults.First(c => c.Id == colId);
+            <div @key="@colId"
+                 draggable="true"
+                 @ondragstart="@(() => _dragFrom = idx)"
+                 @ondragend="@(() => _dragFrom = -1)"
+                 @ondragover:preventDefault="true"
+                 @ondrop="@(() => Drop(idx))"
+                 style="padding:5px 14px;background:rgba(255,255,255,.08);
+                        border-radius:4px;cursor:grab;font-size:0.85em;
+                        border:1px solid rgba(255,255,255,.15);
+                        user-select:none;
+                        @(_dragFrom == idx ? "opacity:0.4;" : "")">
+                ☰ @col.Title
+            </div>
+        }
+        <!-- trailing drop zone — lets the user drop an item at the very last position -->
+        <div @ondragover:preventDefault="true"
+             @ondrop="@DropAtEnd"
+             style="height:30px;min-width:36px;flex:0 0 auto;border-radius:4px;
+                    border:2px dashed @(_dragFrom >= 0 ? "rgba(255,255,255,.4)" : "transparent");
+                    box-sizing:border-box;transition:border-color .12s">
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GridColumnPrefs? Prefs { get; set; }
+    [Parameter] public EventCallback OnReordered { get; set; }
+
+    private int _dragFrom = -1;
+
+    private async Task Drop(int toIdx)
+    {
+        if (_dragFrom < 0) return;
+        if (_dragFrom != toIdx) Prefs!.Reorder(_dragFrom, toIdx);
+        _dragFrom = -1;
+        await Prefs!.SaveAsync(JS);
+        await OnReordered.InvokeAsync();
+    }
+
+    private async Task DropAtEnd()
+    {
+        if (_dragFrom < 0) return;
+        Prefs!.AppendToEnd(_dragFrom);
+        _dragFrom = -1;
+        await Prefs!.SaveAsync(JS);
+        await OnReordered.InvokeAsync();
+    }
+
+    private async Task Reset()
+    {
+        Prefs!.Reset();
+        _dragFrom = -1;
+        await Prefs.SaveAsync(JS);
+        await OnReordered.InvokeAsync();
+    }
+}
