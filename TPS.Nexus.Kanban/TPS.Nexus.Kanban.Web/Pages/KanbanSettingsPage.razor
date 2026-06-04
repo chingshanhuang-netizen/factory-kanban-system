@@ -4,6 +4,7 @@
 @inject IFunctionPermissionService PermSvc
 @inject IMapImportService MapImportSvc
 @inject NotificationService NotifySvc
+@inject DialogService DialogSvc
 @inject IOptions<KanbanModuleOptions> ModuleOpts
 
 <PageTitle>看板設定</PageTitle>
@@ -24,20 +25,10 @@
                     <RadzenButton Text="+ 新增設備" ButtonStyle="ButtonStyle.Primary"
                                   Size="ButtonSize.Small" Click="@AddEquipment" />
                 </div>
-                <RadzenDataGrid @ref="_equipGrid" Data="@AllEquipment" TItem="Equipment"
-                                EditMode="DataGridEditMode.Single"
-                                RowUpdate="@OnEquipmentUpdate">
+                <RadzenDataGrid @ref="_equipGrid" Data="@AllEquipment" TItem="Equipment">
                     <Columns>
-                        <RadzenDataGridColumn TItem="Equipment" Property="Name" Title="名稱">
-                            <EditTemplate Context="eq">
-                                <RadzenTextBox @bind-Value="eq.Name" Style="width:100%" />
-                            </EditTemplate>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn TItem="Equipment" Property="Tag" Title="標籤">
-                            <EditTemplate Context="eq">
-                                <RadzenTextBox @bind-Value="eq.Tag" Style="width:100%" />
-                            </EditTemplate>
-                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Equipment" Property="Name" Title="名稱" />
+                        <RadzenDataGridColumn TItem="Equipment" Property="Tag" Title="標籤" />
                         <RadzenDataGridColumn TItem="Equipment" Title="圖示" Width="80px">
                             <Template Context="eq">
                                 <EquipmentIconRenderer Equipment="@eq" />
@@ -46,21 +37,12 @@
                         <RadzenDataGridColumn TItem="Equipment" Title="操作" Width="120px">
                             <Template Context="eq">
                                 <RadzenButton Text="編輯" Size="ButtonSize.ExtraSmall"
-                                              Click="@(() => _equipGrid?.EditRow(eq) ?? Task.CompletedTask)" />
+                                              Click="@(() => EditEquipment(eq))" />
                                 <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
                                               ButtonStyle="ButtonStyle.Danger"
                                               Click="@(() => DeleteEquipment(eq.Id))"
                                               Style="margin-left:4px" />
                             </Template>
-                            <EditTemplate Context="eq">
-                                <RadzenButton Text="儲存" Size="ButtonSize.ExtraSmall"
-                                              ButtonStyle="ButtonStyle.Primary"
-                                              Click="@(() => _equipGrid?.UpdateRow(eq) ?? Task.CompletedTask)" />
-                                <RadzenButton Text="取消" Size="ButtonSize.ExtraSmall"
-                                              ButtonStyle="ButtonStyle.Light"
-                                              Click="@(() => CancelEquipmentEdit(eq))"
-                                              Style="margin-left:4px" />
-                            </EditTemplate>
                         </RadzenDataGridColumn>
                     </Columns>
                 </RadzenDataGrid>
@@ -110,22 +92,94 @@
             </RadzenTabsItem>
 
             <RadzenTabsItem Text="圖示上傳">
-                <RadzenCard Style="max-width:400px">
-                    <RadzenText TextStyle="TextStyle.Subtitle1">上傳設備圖示</RadzenText>
-                    <InputFile OnChange="@OnIconFileSelected"
-                               accept=".png,.jpg,.jpeg,.svg"
-                               style="color:#aaa;width:100%;margin-top:8px" />
-                    <RadzenButton Text="上傳" ButtonStyle="ButtonStyle.Primary"
-                                  Style="margin-top:8px;width:100%"
-                                  Disabled="@(_iconFile == null)"
-                                  Click="@DoIconUpload" />
+                <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;padding:4px 0">
+
+                    <!-- Step 1: Upload -->
+                    <RadzenCard Style="min-width:340px;max-width:420px">
+                        <RadzenText TextStyle="TextStyle.Subtitle1" Style="margin-bottom:12px">① 上傳圖示</RadzenText>
+
+                        <InputFile OnChange="@OnIconFileSelected"
+                                   accept=".png,.jpg,.jpeg,.svg"
+                                   style="color:#aaa;width:100%" />
+
+                        @if (!string.IsNullOrEmpty(_localPreviewUrl))
+                        {
+                            <div style="display:flex;align-items:center;gap:10px;margin-top:12px;
+                                        padding:8px;background:rgba(255,255,255,.05);border-radius:4px">
+                                <img src="@_localPreviewUrl" alt="預覽"
+                                     style="width:48px;height:48px;object-fit:contain" />
+                                <span style="color:#aaa;font-size:0.85em">選取預覽（尚未上傳至伺服器）</span>
+                            </div>
+                        }
+
+                        <RadzenButton Text="上傳" ButtonStyle="ButtonStyle.Primary"
+                                      Style="margin-top:10px;width:100%"
+                                      Disabled="@(_iconFileBytes == null)"
+                                      Click="@DoIconUpload" />
+
+                        @if (!string.IsNullOrEmpty(IconUploadResult))
+                        {
+                            <div style="margin-top:12px;padding:10px;border-radius:4px;
+                                        border:1px solid rgba(76,175,80,.4);background:rgba(76,175,80,.08)">
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    <img src="@IconUploadResult" alt="已上傳圖示"
+                                         style="width:48px;height:48px;object-fit:contain;
+                                                background:rgba(255,255,255,.06);border-radius:4px;padding:4px" />
+                                    <div style="flex:1;min-width:0">
+                                        <div style="color:#4caf50;font-size:0.82em;font-weight:500;margin-bottom:2px">
+                                            ✔ 上傳成功
+                                        </div>
+                                        <div style="color:#aaa;font-size:0.75em;word-break:break-all">
+                                            @IconUploadResult
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </RadzenCard>
+
+                    <!-- Step 2: Assign to equipment (only shown after upload) -->
                     @if (!string.IsNullOrEmpty(IconUploadResult))
                     {
-                        <div style="margin-top:8px;color:#4caf50;font-size:0.85em;word-break:break-all">
-                            @IconUploadResult
-                        </div>
+                        <RadzenCard Style="min-width:280px;max-width:360px">
+                            <RadzenText TextStyle="TextStyle.Subtitle1" Style="margin-bottom:8px">② 套用到設備</RadzenText>
+                            <p style="color:#aaa;font-size:0.85em;margin:0 0 12px">
+                                選擇要套用此圖示的設備
+                            </p>
+
+                            <RadzenDropDown @bind-Value="_assignTargetId"
+                                            Data="@AllEquipment"
+                                            TextProperty="Name"
+                                            ValueProperty="Id"
+                                            TValue="int"
+                                            Placeholder="選擇設備..."
+                                            Style="width:100%" />
+
+                            @if (_assignTargetId > 0)
+                            {
+                                var targetEq = AllEquipment.FirstOrDefault(e => e.Id == _assignTargetId);
+                                if (targetEq != null)
+                                {
+                                    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;
+                                                padding:8px;background:rgba(255,255,255,.04);border-radius:4px">
+                                        <span style="color:#aaa;font-size:0.82em">目前：</span>
+                                        <EquipmentIconRenderer Equipment="@targetEq" />
+                                        <span style="color:#aaa;font-size:0.82em">→</span>
+                                        <img src="@IconUploadResult" alt="新圖示"
+                                             style="width:1.6em;height:1.6em;object-fit:contain" />
+                                        <span style="color:#aaa;font-size:0.82em">@targetEq.Name</span>
+                                    </div>
+                                }
+                            }
+
+                            <RadzenButton Text="套用到設備" ButtonStyle="ButtonStyle.Success"
+                                          Style="margin-top:10px;width:100%"
+                                          Disabled="@(_assignTargetId == 0)"
+                                          Click="@AssignIconToEquipment" />
+                        </RadzenCard>
                     }
-                </RadzenCard>
+
+                </div>
             </RadzenTabsItem>
 
             <RadzenTabsItem Text="地圖管理">
@@ -160,8 +214,11 @@
     private List<FactoryMap> AllMaps = new();
     private RadzenDataGrid<Equipment>? _equipGrid;
     private RadzenDataGrid<DataSourceConfig>? _dsGrid;
-    private IBrowserFile? _iconFile;
+    private byte[]? _iconFileBytes;
+    private string _iconFileName = string.Empty;
     private string IconUploadResult = string.Empty;
+    private string _localPreviewUrl = string.Empty;
+    private int _assignTargetId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -177,38 +234,19 @@
         AllMaps        = (await MapImportSvc.GetAllAsync()).ToList();
     }
 
-    private async Task AddEquipment()
-    {
-        var eq = new Equipment { Name = "新設備" };
-        AllEquipment.Insert(0, eq);
-        await (_equipGrid?.Reload() ?? Task.CompletedTask);
-        if (_equipGrid != null)
-            await _equipGrid.EditRow(eq);
-    }
+    private Task AddEquipment() => OpenEquipmentDialog(new Equipment());
 
-    private async Task OnEquipmentUpdate(Equipment eq)
-    {
-        // W-8: CreateEquipmentAsync throws ArgumentException for empty Name; catch and
-        // show a notification instead of letting the exception bubble to the circuit.
-        try
-        {
-            if (eq.Id == 0) await EquipmentSvc.CreateEquipmentAsync(eq);
-            else await EquipmentSvc.UpdateEquipmentAsync(eq);
-            await LoadAll();
-            await (_equipGrid?.Reload() ?? Task.CompletedTask);
-        }
-        catch (Exception ex)
-        {
-            NotifySvc.Notify(NotificationSeverity.Error, "儲存失敗", ex.Message);
-        }
-    }
+    private Task EditEquipment(Equipment eq) => OpenEquipmentDialog(eq);
 
-    private async Task CancelEquipmentEdit(Equipment eq)
+    private async Task OpenEquipmentDialog(Equipment eq)
     {
-        _equipGrid?.CancelEditRow(eq);
-        if (eq.Id == 0)
+        var saved = await DialogSvc.OpenAsync<EquipmentEditDialog>(
+            eq.Id == 0 ? "新增設備" : "編輯設備",
+            new Dictionary<string, object> { { "Equipment", eq } },
+            new DialogOptions { Width = "480px", CloseDialogOnOverlayClick = false });
+        if (saved is true)
         {
-            AllEquipment.Remove(eq);
+            AllEquipment = (await EquipmentSvc.GetAllEquipmentAsync()).ToList();
             await (_equipGrid?.Reload() ?? Task.CompletedTask);
         }
     }
@@ -274,23 +312,68 @@
         }
     }
 
-    private void OnIconFileSelected(InputFileChangeEventArgs args)
+    private async Task OnIconFileSelected(InputFileChangeEventArgs args)
     {
-        _iconFile = args.File;
+        var file         = args.File;
+        _iconFileBytes   = null;
+        _iconFileName    = string.Empty;
+        IconUploadResult = string.Empty;
+        _localPreviewUrl = string.Empty;
+        _assignTargetId  = 0;
+        try
+        {
+            // Read into memory immediately — IBrowserFile JS reference becomes invalid after re-render
+            await using var src = file.OpenReadStream(maxAllowedSize: ModuleOpts.Value.IconUploadMaxBytes);
+            using var ms        = new MemoryStream();
+            await src.CopyToAsync(ms);
+            _iconFileBytes   = ms.ToArray();
+            _iconFileName    = file.Name;
+            var mime         = file.ContentType ?? "image/png";
+            _localPreviewUrl = $"data:{mime};base64,{Convert.ToBase64String(_iconFileBytes)}";
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "讀取圖示失敗", ex.Message);
+        }
     }
 
     private async Task DoIconUpload()
     {
-        if (_iconFile == null) return;
+        if (_iconFileBytes == null || string.IsNullOrEmpty(_iconFileName)) return;
         try
         {
-            await using var stream = _iconFile.OpenReadStream(maxAllowedSize: ModuleOpts.Value.IconUploadMaxBytes);
-            IconUploadResult = await IconSvc.UploadAsync(stream, _iconFile.Name);
-            NotifySvc.Notify(NotificationSeverity.Success, "圖示已上傳", IconUploadResult);
+            using var stream = new MemoryStream(_iconFileBytes);
+            IconUploadResult = await IconSvc.UploadAsync(stream, _iconFileName);
+            _localPreviewUrl = string.Empty;
+            _iconFileBytes   = null;
+            _iconFileName    = string.Empty;
+            _assignTargetId  = 0;
+            StateHasChanged();
+            NotifySvc.Notify(NotificationSeverity.Success, "圖示已上傳");
         }
         catch (Exception ex)
         {
             NotifySvc.Notify(NotificationSeverity.Error, "上傳圖示失敗", ex.Message);
+        }
+    }
+
+    private async Task AssignIconToEquipment()
+    {
+        var eq = AllEquipment.FirstOrDefault(e => e.Id == _assignTargetId);
+        if (eq == null || string.IsNullOrEmpty(IconUploadResult)) return;
+        try
+        {
+            eq.IconType  = IconType.CustomImage;
+            eq.IconValue = IconUploadResult;
+            await EquipmentSvc.UpdateEquipmentAsync(eq);
+            AllEquipment = (await EquipmentSvc.GetAllEquipmentAsync()).ToList();
+            await (_equipGrid?.Reload() ?? Task.CompletedTask);
+            NotifySvc.Notify(NotificationSeverity.Success, "圖示已套用", $"已將圖示套用至「{eq.Name}」");
+            _assignTargetId = 0;
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "套用圖示失敗", ex.Message);
         }
     }
 

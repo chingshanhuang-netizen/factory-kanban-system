@@ -1,0 +1,194 @@
+@inject IEquipmentService EquipmentSvc
+@inject IIconUploadService IconSvc
+@inject NotificationService NotifySvc
+@inject DialogService DialogSvc
+@inject IOptions<KanbanModuleOptions> ModuleOpts
+@inject IJSRuntime JS
+
+<RadzenStack Gap="12px" Style="padding:4px;min-width:440px">
+
+    <RadzenFormField Text="名稱 *" Variant="Variant.Outlined">
+        <RadzenTextBox @bind-Value="_edit.Name" Style="width:100%" />
+    </RadzenFormField>
+
+    <RadzenFormField Text="標籤" Variant="Variant.Outlined">
+        <RadzenTextBox @bind-Value="_edit.Tag" Style="width:100%" />
+    </RadzenFormField>
+
+    <RadzenFormField Text="描述" Variant="Variant.Outlined">
+        <RadzenTextBox @bind-Value="_edit.Description" Style="width:100%" />
+    </RadzenFormField>
+
+    <RadzenFormField Text="圖示類型" Variant="Variant.Outlined">
+        <RadzenDropDown @bind-Value="_edit.IconType"
+                        Data="@_iconTypeOptions"
+                        TextProperty="Label"
+                        ValueProperty="Value"
+                        TValue="IconType"
+                        Style="width:100%" />
+    </RadzenFormField>
+
+    @if (_edit.IconType == IconType.CssClass)
+    {
+        <RadzenFormField Text="CSS Class 名稱" Variant="Variant.Outlined">
+            <RadzenTextBox @bind-Value="_edit.IconValue"
+                           Placeholder="例如：rzi-wrench"
+                           Style="width:100%" />
+        </RadzenFormField>
+    }
+    else
+    {
+        <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+                <InputFile id="icon-file-input" OnChange="@OnFileSelected"
+                           accept=".png,.jpg,.jpeg,.svg"
+                           style="flex:1;font-size:0.85em;color:#aaa" />
+                <RadzenButton Text="上傳" Size="ButtonSize.Small"
+                              ButtonStyle="ButtonStyle.Secondary"
+                              Disabled="@(_iconFileBytes == null || _uploading)"
+                              Click="@DoUpload" />
+            </div>
+            @if (_uploading)
+            {
+                <div style="font-size:0.8em;color:#aaa">上傳中...</div>
+            }
+            <RadzenFormField Text="已儲存圖片路徑" Variant="Variant.Outlined">
+                <RadzenTextBox @bind-Value="_edit.IconValue"
+                               Placeholder="選擇並上傳圖片，或直接輸入路徑"
+                               Style="width:100%" />
+            </RadzenFormField>
+        </div>
+    }
+
+    <div style="display:flex;align-items:center;gap:12px;padding:10px;
+                background:rgba(255,255,255,.06);border-radius:4px;min-height:48px">
+        <span style="color:#aaa;font-size:0.85em;white-space:nowrap">預覽：</span>
+        @if (_edit.IconType == IconType.CustomImage && !string.IsNullOrEmpty(_localPreviewUrl))
+        {
+            <img src="@_localPreviewUrl" alt="預覽"
+                 style="width:1.8em;height:1.8em;object-fit:contain" />
+        }
+        else
+        {
+            <EquipmentIconRenderer Equipment="_edit" />
+        }
+        <span style="color:#ccc;font-size:0.9em;margin-left:4px">@_edit.Name</span>
+        @if (_edit.IconType == IconType.CustomImage && !string.IsNullOrEmpty(_localPreviewUrl)
+             && string.IsNullOrEmpty(_edit.IconValue))
+        {
+            <span style="color:#f90;font-size:0.78em">(尚未上傳，儲存前請按「上傳」)</span>
+        }
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+        <RadzenButton Text="取消" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />
+        <RadzenButton Text="儲存" ButtonStyle="ButtonStyle.Primary"
+                      Disabled="@_uploading" Click="@Save" />
+    </div>
+
+</RadzenStack>
+
+@code {
+    [Parameter] public Equipment Equipment { get; set; } = new();
+
+    private Equipment _edit = new();
+    private byte[]? _iconFileBytes;
+    private string _iconFileName = string.Empty;
+    private string _localPreviewUrl = string.Empty;
+    private bool _uploading;
+
+    private record IconTypeOption(string Label, IconType Value);
+    private static readonly List<IconTypeOption> _iconTypeOptions = new()
+    {
+        new("CSS 字體圖示", IconType.CssClass),
+        new("自訂圖片",     IconType.CustomImage),
+    };
+
+    protected override void OnParametersSet()
+    {
+        _edit = new Equipment
+        {
+            Id          = Equipment.Id,
+            Name        = Equipment.Name,
+            Tag         = Equipment.Tag,
+            Description = Equipment.Description,
+            IconType    = Equipment.IconType,
+            IconValue   = Equipment.IconValue,
+        };
+        _localPreviewUrl = string.Empty;
+        _iconFileBytes   = null;
+        _iconFileName    = string.Empty;
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs args)
+    {
+        var file         = args.File;
+        _iconFileBytes   = null;
+        _iconFileName    = string.Empty;
+        _localPreviewUrl = string.Empty;
+        try
+        {
+            // Read into memory immediately — IBrowserFile JS reference becomes invalid after re-render
+            await using var src = file.OpenReadStream(maxAllowedSize: ModuleOpts.Value.IconUploadMaxBytes);
+            using var ms        = new MemoryStream();
+            await src.CopyToAsync(ms);
+            _iconFileBytes   = ms.ToArray();
+            _iconFileName    = file.Name;
+            var mime         = file.ContentType ?? "image/png";
+            _localPreviewUrl = $"data:{mime};base64,{Convert.ToBase64String(_iconFileBytes)}";
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "讀取圖示失敗", ex.Message);
+        }
+    }
+
+    private async Task DoUpload()
+    {
+        if (_iconFileBytes == null || string.IsNullOrEmpty(_iconFileName)) return;
+        _uploading = true;
+        try
+        {
+            using var stream = new MemoryStream(_iconFileBytes);
+            _edit.IconValue  = await IconSvc.UploadAsync(stream, _iconFileName);
+            _localPreviewUrl = string.Empty;
+            _iconFileBytes   = null;
+            _iconFileName    = string.Empty;
+            NotifySvc.Notify(NotificationSeverity.Success, "圖示已上傳", _edit.IconValue);
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "上傳圖示失敗", ex.Message);
+        }
+        finally
+        {
+            _uploading = false;
+        }
+    }
+
+    private void Cancel() => DialogSvc.Close(false);
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_edit.Name))
+        {
+            NotifySvc.Notify(NotificationSeverity.Warning, "名稱不能為空", "請輸入設備名稱");
+            return;
+        }
+        if (_edit.IconType == IconType.CustomImage && _iconFileBytes != null)
+        {
+            await DoUpload();
+            if (_iconFileBytes != null) return;  // 上傳失敗則停止
+        }
+        try
+        {
+            if (_edit.Id == 0) await EquipmentSvc.CreateEquipmentAsync(_edit);
+            else               await EquipmentSvc.UpdateEquipmentAsync(_edit);
+            DialogSvc.Close(true);
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "儲存失敗", ex.Message);
+        }
+    }
+}
