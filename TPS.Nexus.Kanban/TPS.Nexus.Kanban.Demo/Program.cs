@@ -7,6 +7,7 @@ using TPS.Nexus.Kanban.Demo.Mocks;
 using TPS.Nexus.Kanban.Services.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseStaticWebAssets();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

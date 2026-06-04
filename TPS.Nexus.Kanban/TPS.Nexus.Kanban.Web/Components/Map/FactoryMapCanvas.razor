@@ -69,6 +69,7 @@
     private DotNetObjectReference<FactoryMapCanvas>? DotNetRef;
     private PeriodicTimer? _pollTimer;
     private CancellationTokenSource _cts = new();
+    private bool _prevIsEditMode;
 
     protected override async Task OnInitializedAsync()
     {
@@ -94,16 +95,17 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && IsEditMode)
+        if (IsEditMode && !_prevIsEditMode)
         {
-            // W-17: JSException if the drag script hasn't loaded yet (e.g., slow network or
-            // script load order issue); catch so the page renders even if drag is unavailable.
-            try
-            {
-                await JS.InvokeVoidAsync("kanbanDrag.init", "map-canvas", DotNetRef);
-            }
+            try { await JS.InvokeVoidAsync("kanbanDrag.init", "map-canvas", DotNetRef); }
             catch (JSException) { }
         }
+        else if (!IsEditMode && _prevIsEditMode)
+        {
+            try { await JS.InvokeVoidAsync("kanbanDrag.destroy"); }
+            catch (JSException) { }
+        }
+        _prevIsEditMode = IsEditMode;
     }
 
     private async Task PollLoopAsync(CancellationToken ct)
