@@ -24,6 +24,7 @@ builder.Services.AddSingleton<ILayoutService,            DemoLayoutService>();
 builder.Services.AddSingleton<IMapImportService,         DemoMapImportService>();
 builder.Services.AddSingleton<IDataSourceService,        DemoDataSourceService>();
 builder.Services.AddSingleton<IIconUploadService,        DemoIconUploadService>();
+builder.Services.AddSingleton<IIconGalleryService,       DemoIconGalleryService>();
 builder.Services.AddSingleton<IFunctionPermissionService, DemoPermissionService>();
 
 var app = builder.Build();
