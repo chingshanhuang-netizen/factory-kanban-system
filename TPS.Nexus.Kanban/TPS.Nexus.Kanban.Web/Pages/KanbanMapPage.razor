@@ -4,6 +4,7 @@
 @inject IAlarmService AlarmSvc
 @inject IFunctionPermissionService PermSvc
 @inject NotificationService NotifySvc
+@inject DialogService DialogSvc
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject UserPrefsService UserPrefs
@@ -38,6 +39,7 @@
 <div style="display:flex;height:calc(100vh - 54px)">
     <div style="flex:1;min-width:0">
         <FactoryMapCanvas MapId="@MapId" IsEditMode="@IsEditMode"
+                          ResumeDraftId="@_resumeDraftId"
                           OnWorkingVersionChanged="@((id) => DraftId = id)" />
     </div>
 
@@ -90,6 +92,7 @@
     private CancellationTokenSource? _carouselCts;
     private bool _carouselPaused;
     private int  _carouselRemainingSeconds;
+    private int? _resumeDraftId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,7 +166,7 @@
     private Task HandleSaveDraft()
     {
         if (DraftId.HasValue)
-            NotifySvc.Notify(NotificationSeverity.Info, "草稿記錄中", $"版本 {DraftId.Value}（點「發布」使其生效）");
+            NotifySvc.Notify(NotificationSeverity.Success, "草稿已儲存", $"版本 {DraftId.Value} — 退出後可繼續編輯，點「發布」使其生效");
         else
             NotifySvc.Notify(NotificationSeverity.Warning, "請先進入編輯模式");
         return Task.CompletedTask;
@@ -201,16 +204,46 @@
         ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
     }
 
-    private void HandleEditModeChanged(bool val)
+    private async Task HandleEditModeChanged(bool val)
     {
-        IsEditMode = val;
         if (val)
         {
+            // Check if a saved draft exists so the user can resume it.
+            _resumeDraftId = null;
+            try
+            {
+                var versions = await LayoutSvc.GetVersionHistoryAsync(MapId);
+                var latestDraft = versions.FirstOrDefault(v => v.Status == LayoutStatus.Draft);
+                if (latestDraft != null)
+                {
+                    var resume = await DialogSvc.Confirm(
+                        $"找到先前儲存的草稿（v{latestDraft.VersionNo}），是否繼續上次的編輯工作？",
+                        "載入草稿",
+                        new ConfirmOptions
+                        {
+                            OkButtonText     = "繼續編輯",
+                            CancelButtonText = "重新開始",
+                        });
+
+                    if (resume == null)
+                    {
+                        // User dismissed the dialog — cancel entering edit mode.
+                        IsEditMode = false;
+                        return;
+                    }
+                    _resumeDraftId = resume == true ? latestDraft.Id : null;
+                }
+            }
+            catch { /* version query failure — fall through to fresh draft */ }
+
+            IsEditMode      = true;
             StopCarousel();
             _carouselPaused = false;
         }
         else
         {
+            IsEditMode = false;
+            _resumeDraftId = null;
             StartCarousel();
         }
     }

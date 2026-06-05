@@ -97,6 +97,7 @@
     [Parameter, EditorRequired] public int MapId { get; set; }
     [Parameter] public bool IsEditMode { get; set; }
     [Parameter] public int CanvasHeight { get; set; } = 600;
+    [Parameter] public int? ResumeDraftId { get; set; }
     [Parameter] public EventCallback<int?> OnWorkingVersionChanged { get; set; }
 
     private FactoryMap? CurrentMap;
@@ -219,25 +220,35 @@
         if (MapId <= 0) return;
         try
         {
-            var draft = await LayoutSvc.SaveDraftAsync(MapId, "{}", "系統");
-            _editVersionId = draft.Id;
-
-            if (_publishedVersionId.HasValue)
+            if (ResumeDraftId.HasValue)
             {
-                var published = await EquipmentSvc.GetWidgetsByVersionAsync(_publishedVersionId.Value);
-                foreach (var w in published)
+                // Continue from the saved draft chosen by the user.
+                _editVersionId = ResumeDraftId.Value;
+                Widgets = (await EquipmentSvc.GetWidgetsByVersionAsync(ResumeDraftId.Value)).ToList();
+            }
+            else
+            {
+                // Start a fresh draft copied from the published version.
+                var draft = await LayoutSvc.SaveDraftAsync(MapId, "{}", "系統");
+                _editVersionId = draft.Id;
+
+                if (_publishedVersionId.HasValue)
                 {
-                    await EquipmentSvc.SaveWidgetAsync(new EquipmentWidget
+                    var published = await EquipmentSvc.GetWidgetsByVersionAsync(_publishedVersionId.Value);
+                    foreach (var w in published)
                     {
-                        EquipmentId     = w.EquipmentId,
-                        LayoutVersionId = draft.Id,
-                        PositionX       = w.PositionX,
-                        PositionY       = w.PositionY,
-                        Width           = w.Width,
-                        Height          = w.Height,
-                    });
+                        await EquipmentSvc.SaveWidgetAsync(new EquipmentWidget
+                        {
+                            EquipmentId     = w.EquipmentId,
+                            LayoutVersionId = draft.Id,
+                            PositionX       = w.PositionX,
+                            PositionY       = w.PositionY,
+                            Width           = w.Width,
+                            Height          = w.Height,
+                        });
+                    }
+                    Widgets = (await EquipmentSvc.GetWidgetsByVersionAsync(draft.Id)).ToList();
                 }
-                Widgets = (await EquipmentSvc.GetWidgetsByVersionAsync(draft.Id)).ToList();
             }
 
             await OnWorkingVersionChanged.InvokeAsync(_editVersionId);
