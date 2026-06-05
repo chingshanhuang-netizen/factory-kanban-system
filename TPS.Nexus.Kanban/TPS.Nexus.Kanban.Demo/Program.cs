@@ -26,6 +26,7 @@ builder.Services.AddSingleton<IDataSourceService,        DemoDataSourceService>(
 builder.Services.AddSingleton<IIconUploadService,        DemoIconUploadService>();
 builder.Services.AddSingleton<IIconGalleryService,       DemoIconGalleryService>();
 builder.Services.AddSingleton<IFunctionPermissionService, DemoPermissionService>();
+builder.Services.AddScoped<TPS.Nexus.Kanban.Web.Services.UserPrefsService>();
 
 var app = builder.Build();
 

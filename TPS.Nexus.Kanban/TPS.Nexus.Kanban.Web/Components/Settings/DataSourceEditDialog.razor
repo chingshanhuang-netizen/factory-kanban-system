@@ -1,0 +1,104 @@
+@inject IEquipmentService EquipmentSvc
+@inject NotificationService NotifySvc
+@inject DialogService DialogSvc
+
+<RadzenStack Gap="12px" Style="padding:4px;min-width:460px">
+
+    <RadzenFormField Text="名稱 *" Variant="Variant.Outlined">
+        <RadzenTextBox @bind-Value="_edit.Name" Style="width:100%" />
+    </RadzenFormField>
+
+    <RadzenFormField Text="資料類型" Variant="Variant.Outlined">
+        <RadzenDropDown @bind-Value="_edit.DataType"
+                        Data="@_dataTypes"
+                        AllowClear="true"
+                        AllowFiltering="true"
+                        Placeholder="選擇資料類型..."
+                        Style="width:100%" />
+    </RadzenFormField>
+
+    <RadzenFormField Text="來源格式" Variant="Variant.Outlined">
+        <RadzenDropDown @bind-Value="_edit.SourceType"
+                        Data="@_sourceTypeOptions"
+                        TextProperty="Label"
+                        ValueProperty="Value"
+                        TValue="DataSourceType"
+                        Style="width:100%" />
+    </RadzenFormField>
+
+    <RadzenFormField Text="查詢/路徑" Variant="Variant.Outlined">
+        <RadzenTextArea @bind-Value="_edit.QueryOrPath"
+                        Placeholder="檔案路徑、SQL 查詢或 API 端點..."
+                        Style="width:100%;height:80px" />
+    </RadzenFormField>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+        <RadzenButton Text="取消" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />
+        <RadzenButton Text="儲存" ButtonStyle="ButtonStyle.Primary" Click="@Save" />
+    </div>
+
+</RadzenStack>
+
+@code {
+    [Parameter] public DataSourceConfig Config { get; set; } = new();
+    [Parameter] public List<string> ExtraDataTypes { get; set; } = new();
+
+    private DataSourceConfig _edit = new();
+    private List<string> _dataTypes = new();
+
+    private record SourceTypeOption(string Label, DataSourceType Value);
+    private static readonly List<SourceTypeOption> _sourceTypeOptions = new()
+    {
+        new("SQL",  DataSourceType.Sql),
+        new("CSV",  DataSourceType.Csv),
+        new("JSON", DataSourceType.Json),
+        new("XML",  DataSourceType.Xml),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var all = await EquipmentSvc.GetAllDataSourceConfigsAsync();
+        _dataTypes = all
+            .Where(c => !string.IsNullOrEmpty(c.DataType))
+            .Select(c => c.DataType!)
+            .Union(ExtraDataTypes)
+            .Distinct()
+            .OrderBy(t => t)
+            .ToList();
+    }
+
+    protected override void OnParametersSet()
+    {
+        _edit = new DataSourceConfig
+        {
+            Id               = Config.Id,
+            Name             = Config.Name,
+            DataType         = Config.DataType,
+            SourceType       = Config.SourceType,
+            ConnectionString = Config.ConnectionString,
+            FilePath         = Config.FilePath,
+            QueryOrPath      = Config.QueryOrPath,
+            Parameters       = Config.Parameters,
+        };
+    }
+
+    private void Cancel() => DialogSvc.Close(false);
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_edit.Name))
+        {
+            NotifySvc.Notify(NotificationSeverity.Warning, "名稱不能為空", "請輸入資料來源名稱");
+            return;
+        }
+        try
+        {
+            await EquipmentSvc.SaveDataSourceConfigAsync(_edit);
+            DialogSvc.Close(true);
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "儲存失敗", ex.Message);
+        }
+    }
+}

@@ -7,5 +7,6 @@ public interface IMapImportService
 {
     Task<FactoryMap> ImportAsync(Stream file, string fileName, MapFormatType format);
     Task<IEnumerable<FactoryMap>> GetAllAsync();
+    Task UpdateAsync(FactoryMap map);
     Task DeleteAsync(int mapId);
 }

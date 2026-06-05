@@ -1,5 +1,4 @@
 using Microsoft.JSInterop;
-using System.Text.Json;
 
 namespace TPS.Nexus.Kanban.Web.Services;
 
@@ -7,20 +6,19 @@ public sealed class GridColumnPrefs
 {
     public sealed record ColDef(string Id, string Title, double? FixedWidth = null, bool Resizable = true);
 
-    private static readonly JsonSerializerOptions JsonOpts =
-        new() { PropertyNameCaseInsensitive = true };
+    private readonly string           _gridId;
+    private readonly UserPrefsService _prefs;
 
-    private readonly string _storageKey;
+    public IReadOnlyList<ColDef>      Defaults { get; }
+    public List<string>               Order    { get; private set; }
+    public Dictionary<string, double> Widths   { get; private set; } = new();
 
-    public IReadOnlyList<ColDef> Defaults { get; }
-    public List<string>               Order  { get; private set; }
-    public Dictionary<string, double> Widths { get; private set; } = new();
-
-    public GridColumnPrefs(string storageKey, IEnumerable<ColDef> defaults)
+    public GridColumnPrefs(string gridId, IEnumerable<ColDef> defaults, UserPrefsService prefs)
     {
-        _storageKey = storageKey;
-        Defaults    = defaults.ToList().AsReadOnly();
-        Order       = Defaults.Select(c => c.Id).ToList();
+        _gridId  = gridId;
+        _prefs   = prefs;
+        Defaults = defaults.ToList().AsReadOnly();
+        Order    = Defaults.Select(c => c.Id).ToList();
     }
 
     public string? Width(string id)
@@ -56,36 +54,23 @@ public sealed class GridColumnPrefs
 
     public async Task LoadAsync(IJSRuntime js)
     {
-        try
+        await _prefs.EnsureLoadedAsync(js);
+        var saved = _prefs.GetGridPrefs(_gridId);
+        if (saved.Order is { Count: > 0 })
         {
-            var json = await js.InvokeAsync<string?>("localStorage.getItem", _storageKey);
-            if (string.IsNullOrEmpty(json)) return;
-            var saved = JsonSerializer.Deserialize<Payload>(json, JsonOpts);
-            if (saved?.Order is { Count: > 0 })
-            {
-                var valid   = saved.Order.Where(id => Defaults.Any(c => c.Id == id)).ToList();
-                var missing = Defaults.Select(c => c.Id).Except(valid);
-                Order = valid.Concat(missing).ToList();
-            }
-            if (saved?.Widths is { Count: > 0 })
-                Widths = saved.Widths;
+            var valid   = saved.Order.Where(id => Defaults.Any(c => c.Id == id)).ToList();
+            var missing = Defaults.Select(c => c.Id).Except(valid);
+            Order = valid.Concat(missing).ToList();
         }
-        catch { }
+        if (saved.Widths is { Count: > 0 })
+            Widths = saved.Widths;
     }
 
     public async Task SaveAsync(IJSRuntime js)
     {
-        try
-        {
-            var json = JsonSerializer.Serialize(new Payload { Order = Order, Widths = Widths });
-            await js.InvokeVoidAsync("localStorage.setItem", _storageKey, json);
-        }
-        catch { }
-    }
-
-    private sealed class Payload
-    {
-        public List<string>?              Order  { get; set; }
-        public Dictionary<string, double>? Widths { get; set; }
+        var g = _prefs.GetGridPrefs(_gridId);
+        g.Order  = Order;
+        g.Widths = Widths;
+        await _prefs.SaveAsync(js);
     }
 }

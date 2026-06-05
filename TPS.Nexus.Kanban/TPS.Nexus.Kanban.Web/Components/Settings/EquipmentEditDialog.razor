@@ -1,6 +1,7 @@
 @inject IEquipmentService EquipmentSvc
 @inject IIconUploadService IconSvc
 @inject IIconGalleryService GallerySvc
+@inject IMapImportService MapSvc
 @inject NotificationService NotifySvc
 @inject DialogService DialogSvc
 @inject IOptions<KanbanModuleOptions> ModuleOpts
@@ -27,6 +28,16 @@
 
     <RadzenFormField Text="描述" Variant="Variant.Outlined">
         <RadzenTextBox @bind-Value="_edit.Description" Style="width:100%" />
+    </RadzenFormField>
+
+    <RadzenFormField Text="地圖名稱" Variant="Variant.Outlined">
+        <RadzenDropDown @bind-Value="_edit.MapName"
+                        Data="@_maps"
+                        TextProperty="Name"
+                        ValueProperty="Name"
+                        AllowClear="true"
+                        Placeholder="選擇地圖..."
+                        Style="width:100%" />
     </RadzenFormField>
 
     <RadzenFormField Text="設備圖示" Variant="Variant.Outlined">
@@ -132,6 +143,8 @@
     private List<string> _galleryIcons = new();
     private List<string> _categories  = new();
 
+    private List<FactoryMap> _maps = new();
+
     private record IconTypeOption(string Label, IconType Value);
     private static readonly List<IconTypeOption> _iconTypeOptions = new()
     {
@@ -141,6 +154,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _maps = (await MapSvc.GetAllAsync()).ToList();
         var all = await EquipmentSvc.GetAllEquipmentAsync();
         _categories = all
             .Where(e => !string.IsNullOrEmpty(e.Category))
@@ -170,6 +184,7 @@
             Category    = Equipment.Category,
             Tag         = Equipment.Tag,
             Description = Equipment.Description,
+            MapName     = Equipment.MapName,
             IconType    = Equipment.IconType,
             IconValue   = Equipment.IconValue,
         };

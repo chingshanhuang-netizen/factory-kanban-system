@@ -12,17 +12,51 @@ public class DemoMapImportService : IMapImportService
         {
             Id         = 1,
             Name       = "廠區一樓平面圖",
+            Floor      = "1F",
+            Area       = "主廠區",
             FormatType = MapFormatType.Svg,
-            FilePath   = "/maps/demo-floor.svg",   // served from wwwroot/maps/
+            FilePath   = "/maps/demo-floor.svg",
             CreatedAt  = DateTime.UtcNow.AddDays(-30),
         },
     };
 
-    public Task<FactoryMap> ImportAsync(Stream file, string fileName, MapFormatType format) =>
-        throw new NotSupportedException("Demo 模式不支援地圖上傳，請使用真實後端。");
+    public Task<FactoryMap> ImportAsync(Stream file, string fileName, MapFormatType format)
+    {
+        using var ms = new MemoryStream();
+        file.CopyTo(ms);
+        var bytes = ms.ToArray();
+        var mime = format switch
+        {
+            MapFormatType.Png => "image/png",
+            MapFormatType.Jpg => "image/jpeg",
+            MapFormatType.Svg => "image/svg+xml",
+            _                 => string.Empty,
+        };
+        var filePath = string.IsNullOrEmpty(mime)
+            ? $"/maps/{System.IO.Path.GetFileName(fileName)}"
+            : $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+
+        var map = new FactoryMap
+        {
+            Id         = _maps.Count > 0 ? _maps.Max(m => m.Id) + 1 : 1,
+            Name       = System.IO.Path.GetFileNameWithoutExtension(fileName),
+            FormatType = format,
+            FilePath   = filePath,
+            CreatedAt  = DateTime.UtcNow,
+        };
+        _maps.Add(map);
+        return Task.FromResult(map);
+    }
 
     public Task<IEnumerable<FactoryMap>> GetAllAsync() =>
         Task.FromResult(_maps.AsEnumerable());
+
+    public Task UpdateAsync(FactoryMap map)
+    {
+        var idx = _maps.FindIndex(m => m.Id == map.Id);
+        if (idx >= 0) _maps[idx] = map;
+        return Task.CompletedTask;
+    }
 
     public Task DeleteAsync(int mapId)
     {

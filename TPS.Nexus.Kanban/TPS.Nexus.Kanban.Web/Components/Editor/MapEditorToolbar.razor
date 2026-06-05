@@ -1,13 +1,26 @@
 @inject IFunctionPermissionService PermSvc
 
 <div style="display:flex;align-items:center;gap:8px;background:#0d1b2a;border-bottom:1px solid #1a3a5c;padding:4px 12px">
-    <span style="color:#aaa;font-size:0.85em">
-        🗺️ <strong style="color:#fff">@MapName</strong>
-        @if (PublishedVersion != null)
-        {
-            <span style="color:#888"> · v@(PublishedVersion.VersionNo) 已發布</span>
-        }
-    </span>
+    @if (AllMaps.Count > 1)
+    {
+        <RadzenDropDown Value="@CurrentMapId"
+                        Data="@AllMaps"
+                        TextProperty="Name"
+                        ValueProperty="Id"
+                        TValue="int"
+                        Change="@((val) => OnMapSelected.InvokeAsync((int)val))"
+                        Style="min-width:160px;max-width:220px" />
+    }
+    else
+    {
+        <span style="color:#aaa;font-size:0.85em">
+            🗺️ <strong style="color:#fff">@MapName</strong>
+        </span>
+    }
+    @if (PublishedVersion != null)
+    {
+        <span style="color:#888;font-size:0.82em"> · v@(PublishedVersion.VersionNo) 已發布</span>
+    }
 
     @if (CanEdit)
     {
@@ -35,6 +48,9 @@
 
 @code {
     [Parameter] public string MapName { get; set; } = string.Empty;
+    [Parameter] public List<FactoryMap> AllMaps { get; set; } = new();
+    [Parameter] public int CurrentMapId { get; set; }
+    [Parameter] public EventCallback<int> OnMapSelected { get; set; }
     [Parameter] public LayoutVersion? PublishedVersion { get; set; }
     [Parameter] public bool IsEditMode { get; set; }
     [Parameter] public EventCallback<bool> IsEditModeChanged { get; set; }

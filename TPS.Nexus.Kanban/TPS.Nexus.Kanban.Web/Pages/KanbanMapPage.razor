@@ -5,6 +5,8 @@
 @inject IFunctionPermissionService PermSvc
 @inject NotificationService NotifySvc
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject UserPrefsService UserPrefs
 @implements IAsyncDisposable
 
 <PageTitle>工廠看板 — @(CurrentMap?.Name ?? "載入中")</PageTitle>
@@ -23,15 +25,20 @@
 
 <MapEditorToolbar
     MapName="@CurrentMap.Name"
+    AllMaps="@AllMaps"
+    CurrentMapId="@MapId"
+    OnMapSelected="@((id) => Navigation.NavigateTo($"/kanban/{id}"))"
     PublishedVersion="@PublishedVersion"
-    @bind-IsEditMode="IsEditMode"
+    IsEditMode="@IsEditMode"
+    IsEditModeChanged="@HandleEditModeChanged"
     OnSaveDraft="@HandleSaveDraft"
     OnPublish="@HandlePublish"
     OnShowVersions="@(() => ShowVersions = !ShowVersions)" />
 
 <div style="display:flex;height:calc(100vh - 54px)">
     <div style="flex:1;min-width:0">
-        <FactoryMapCanvas MapId="@MapId" IsEditMode="@IsEditMode" />
+        <FactoryMapCanvas MapId="@MapId" IsEditMode="@IsEditMode"
+                          OnWorkingVersionChanged="@((id) => DraftId = id)" />
     </div>
 
     @if (ShowVersions)
@@ -40,21 +47,38 @@
             <LayoutVersionPanel MapId="@MapId" OnRolledBack="@HandleRollback" />
         </div>
     }
-
-    @if (ActiveAlarms.Any())
-    {
-        <div style="width:320px;border-left:1px solid #7f0000;padding:12px;overflow-y:auto">
-            <AlarmPanel Alarms="@ActiveAlarms" OnResolved="@ReloadAlarms" />
-        </div>
-    }
 </div>
 
 <AlarmToast HubConnection="@HubConn" />
+
+@if (CurrentMap?.CarouselEnabled == true && AllMaps.Any(m => m.CarouselEnabled))
+{
+    <div style="position:fixed;bottom:16px;right:16px;z-index:200;
+                background:rgba(0,0,0,.82);color:#4fc3f7;
+                display:flex;align-items:center;gap:8px;
+                padding:6px 14px;border-radius:20px;font-size:0.82em">
+        @if (_carouselPaused)
+        {
+            <span style="color:#aaa">⏸ 輪播已暫停</span>
+            <button @onclick="ToggleCarouselPause"
+                    style="background:#4fc3f7;color:#000;border:none;border-radius:10px;
+                           padding:2px 10px;cursor:pointer;font-size:0.88em">▶ 繼續</button>
+        }
+        else
+        {
+            <span>⏱ @_carouselRemainingSeconds 秒後切換</span>
+            <button @onclick="ToggleCarouselPause"
+                    style="background:rgba(255,255,255,.18);color:#fff;border:none;
+                           border-radius:10px;padding:2px 10px;cursor:pointer;font-size:0.88em">⏸ 暫停</button>
+        }
+    </div>
+}
 
 @code {
     [Parameter] public int MapId { get; set; }
 
     private FactoryMap? CurrentMap;
+    private List<FactoryMap> AllMaps = new();
     private LayoutVersion? PublishedVersion;
     private List<AlarmRecord> ActiveAlarms = new();
     private bool CanView;
@@ -62,16 +86,33 @@
     private bool ShowVersions;
     private int? DraftId;
     private HubConnection? HubConn;
+    private int  _prevMapId = -1;
+    private CancellationTokenSource? _carouselCts;
+    private bool _carouselPaused;
+    private int  _carouselRemainingSeconds;
 
     protected override async Task OnInitializedAsync()
     {
         CanView = await PermSvc.HasPermissionAsync(KanbanPermissions.View);
         if (!CanView) return;
 
-        var maps = await MapImportSvc.GetAllAsync();
-        CurrentMap = maps.FirstOrDefault(m => m.Id == MapId);
+        // Load persisted prefs; if the user's last-used map differs from the URL param, redirect.
+        await UserPrefs.EnsureLoadedAsync(JS);
+        if (UserPrefs.SelectedMapId.HasValue && UserPrefs.SelectedMapId.Value != MapId)
+        {
+            Navigation.NavigateTo($"/kanban/{UserPrefs.SelectedMapId.Value}", replace: true);
+            return;
+        }
+
+        _prevMapId       = MapId;
+        AllMaps          = (await MapImportSvc.GetAllAsync()).ToList();
+        CurrentMap       = AllMaps.FirstOrDefault(m => m.Id == MapId);
         PublishedVersion = await LayoutSvc.GetPublishedVersionAsync(MapId);
         await ReloadAlarms();
+
+        UserPrefs.SetSelectedMapId(MapId);
+        await UserPrefs.SaveAsync(JS);
+        StartCarousel();
 
         // W-2: WithUrl requires an absolute URI in Blazor Server; use NavigationManager to resolve.
         HubConn = new HubConnectionBuilder()
@@ -102,32 +143,41 @@
         }
     }
 
-    private async Task HandleSaveDraft()
+    protected override async Task OnParametersSetAsync()
     {
-        if (CurrentMap == null) return;
-        // W-15: SaveDraftAsync throws InvalidOperationException if the map no longer exists;
-        // catch to prevent the unhandled exception from disconnecting the Blazor circuit.
-        try
-        {
-            var draft = await LayoutSvc.SaveDraftAsync(MapId, "{}", "CurrentUser");
-            DraftId = draft.Id;
-            NotifySvc.Notify(NotificationSeverity.Info, "草稿已儲存", $"v{draft.VersionNo}");
-        }
-        catch (Exception ex)
-        {
-            NotifySvc.Notify(NotificationSeverity.Error, "草稿儲存失敗", ex.Message);
-        }
+        if (!CanView || MapId == _prevMapId) return;
+        _prevMapId       = MapId;
+        IsEditMode       = false;
+        DraftId          = null;
+        ShowVersions     = false;
+        AllMaps          = (await MapImportSvc.GetAllAsync()).ToList();
+        CurrentMap       = AllMaps.FirstOrDefault(m => m.Id == MapId);
+        PublishedVersion = await LayoutSvc.GetPublishedVersionAsync(MapId);
+        await ReloadAlarms();
+
+        UserPrefs.SetSelectedMapId(MapId);
+        await UserPrefs.SaveAsync(JS);
+        StartCarousel();
+    }
+
+    private Task HandleSaveDraft()
+    {
+        if (DraftId.HasValue)
+            NotifySvc.Notify(NotificationSeverity.Info, "草稿記錄中", $"版本 {DraftId.Value}（點「發布」使其生效）");
+        else
+            NotifySvc.Notify(NotificationSeverity.Warning, "請先進入編輯模式");
+        return Task.CompletedTask;
     }
 
     private async Task HandlePublish()
     {
-        if (DraftId == null) { NotifySvc.Notify(NotificationSeverity.Warning, "請先存草稿"); return; }
-        // W-10: PublishAsync throws InvalidOperationException if draft is not in Draft status
+        if (DraftId == null) { NotifySvc.Notify(NotificationSeverity.Warning, "請先進入編輯模式"); return; }
         try
         {
             var published = await LayoutSvc.PublishAsync(DraftId.Value);
             PublishedVersion = published;
-            DraftId = null;
+            DraftId          = null;
+            IsEditMode       = false;   // canvas EndEditSessionAsync will reload published state
             NotifySvc.Notify(NotificationSeverity.Success, "已發布", $"v{published.VersionNo}");
         }
         catch (Exception ex)
@@ -151,8 +201,78 @@
         ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
     }
 
+    private void HandleEditModeChanged(bool val)
+    {
+        IsEditMode = val;
+        if (val)
+        {
+            StopCarousel();
+            _carouselPaused = false;
+        }
+        else
+        {
+            StartCarousel();
+        }
+    }
+
+    private void StartCarousel()
+    {
+        StopCarousel();
+        if (IsEditMode || CurrentMap == null || !CurrentMap.CarouselEnabled) return;
+
+        var carouselMaps = AllMaps
+            .Where(m => m.CarouselEnabled)
+            .OrderBy(m => m.CarouselOrder)
+            .ThenBy(m => m.Id)
+            .ToList();
+
+        if (carouselMaps.Count == 0) return;
+
+        var seconds  = CurrentMap.CarouselSeconds > 0 ? CurrentMap.CarouselSeconds : 10;
+        var current  = MapId;
+        _carouselCts = new CancellationTokenSource();
+        _ = CarouselTickAsync(current, carouselMaps, seconds, _carouselCts.Token);
+    }
+
+    private async Task CarouselTickAsync(int currentId, List<FactoryMap> maps, int seconds, CancellationToken ct)
+    {
+        _carouselRemainingSeconds = seconds;
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                _carouselRemainingSeconds = Math.Max(0, _carouselRemainingSeconds - 1);
+                await InvokeAsync(StateHasChanged);
+                if (_carouselRemainingSeconds <= 0) break;
+            }
+            if (!ct.IsCancellationRequested)
+            {
+                var idx     = maps.FindIndex(m => m.Id == currentId);
+                var nextMap = maps[(idx + 1) % maps.Count];
+                await InvokeAsync(() => Navigation.NavigateTo($"/kanban/{nextMap.Id}"));
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void ToggleCarouselPause()
+    {
+        _carouselPaused = !_carouselPaused;
+        if (_carouselPaused) StopCarousel();
+        else                 StartCarousel();
+    }
+
+    private void StopCarousel()
+    {
+        _carouselCts?.Cancel();
+        _carouselCts?.Dispose();
+        _carouselCts = null;
+    }
+
     public async ValueTask DisposeAsync()
     {
+        StopCarousel();
         if (HubConn != null)
         {
             // W-1: stop the connection gracefully before disposing to avoid leaving a

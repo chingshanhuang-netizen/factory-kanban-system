@@ -64,6 +64,22 @@ public class MapImportService : IMapImportService
         return await conn.QueryAsync<FactoryMap>("SELECT * FROM kanban_factory_maps ORDER BY CreatedAt DESC");
     }
 
+    public async Task UpdateAsync(FactoryMap map)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+        if (map.Id <= 0) throw new ArgumentOutOfRangeException(nameof(map));
+        await using var conn = _db.CreateConnection();
+        await conn.ExecuteAsync(
+            """
+            UPDATE kanban_factory_maps
+            SET Name = @Name, Floor = @Floor, Area = @Area,
+                CarouselEnabled = @CarouselEnabled, CarouselOrder = @CarouselOrder, CarouselSeconds = @CarouselSeconds
+            WHERE Id = @Id
+            """, new { map.Name, map.Floor, map.Area,
+                       map.CarouselEnabled, map.CarouselOrder, map.CarouselSeconds,
+                       map.Id });
+    }
+
     public async Task DeleteAsync(int mapId)
     {
         // S-7: DELETE WHERE Id=0 silently affects no rows and leaks physical files

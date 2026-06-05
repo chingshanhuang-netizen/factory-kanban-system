@@ -15,9 +15,18 @@
                    style="color:#aaa;width:100%" />
     </div>
 
+    @if (!string.IsNullOrEmpty(_previewUrl))
+    {
+        <div style="margin-top:10px;padding:8px;background:rgba(255,255,255,.04);
+                    border-radius:4px;border:1px solid rgba(255,255,255,.12);text-align:center">
+            <img src="@_previewUrl" alt="地圖預覽"
+                 style="max-width:100%;max-height:200px;object-fit:contain" />
+        </div>
+    }
+
     <RadzenButton Text="上傳並匯入" ButtonStyle="ButtonStyle.Primary"
                   Style="margin-top:12px;width:100%"
-                  Disabled="@(_selectedFile == null)"
+                  Disabled="@(_selectedFileBytes == null)"
                   Click="@DoImport" />
 
     @if (!string.IsNullOrEmpty(StatusMessage))
@@ -31,10 +40,12 @@
 @code {
     [Parameter] public EventCallback<FactoryMap> OnImported { get; set; }
 
-    private IBrowserFile? _selectedFile;
+    private byte[]? _selectedFileBytes;
+    private string  _selectedFileName = string.Empty;
+    private string  _previewUrl       = string.Empty;
     private MapFormatType SelectedFormat = MapFormatType.Png;
     private string StatusMessage = string.Empty;
-    private bool _isError;
+    private bool   _isError;
 
     private record FormatOption(string Label, MapFormatType Value);
     private static readonly List<FormatOption> FormatOptions = new()
@@ -47,27 +58,59 @@
         new("XML 座標定義",  MapFormatType.XmlCoord),
     };
 
-    private void OnFileSelected(InputFileChangeEventArgs args)
+    private async Task OnFileSelected(InputFileChangeEventArgs args)
     {
-        _selectedFile = args.File;
+        _selectedFileBytes = null;
+        _selectedFileName  = string.Empty;
+        _previewUrl        = string.Empty;
+        StatusMessage      = string.Empty;
+        try
+        {
+            var file = args.File;
+            _selectedFileName = file.Name;
+            // Read immediately — IBrowserFile JS ref becomes invalid after re-render
+            await using var src = file.OpenReadStream(maxAllowedSize: ModuleOpts.Value.MapUploadMaxBytes);
+            using var ms = new MemoryStream();
+            await src.CopyToAsync(ms);
+            _selectedFileBytes = ms.ToArray();
+
+            if (SelectedFormat is MapFormatType.Png or MapFormatType.Jpg or MapFormatType.Svg)
+            {
+                var mime = SelectedFormat switch
+                {
+                    MapFormatType.Png => "image/png",
+                    MapFormatType.Jpg => "image/jpeg",
+                    MapFormatType.Svg => "image/svg+xml",
+                    _                 => "image/png",
+                };
+                _previewUrl = $"data:{mime};base64,{Convert.ToBase64String(_selectedFileBytes)}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _isError      = true;
+            StatusMessage = $"❌ 讀取檔案失敗：{ex.Message}";
+        }
     }
 
     private async Task DoImport()
     {
-        if (_selectedFile == null) return;
-        _isError = false;
+        if (_selectedFileBytes == null) return;
+        _isError      = false;
         StatusMessage = "匯入中...";
 
         try
         {
-            await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: ModuleOpts.Value.MapUploadMaxBytes);
-            var map = await MapImportSvc.ImportAsync(stream, _selectedFile.Name, SelectedFormat);
-            StatusMessage = $"✅ 已匯入：{map.Name}";
+            using var stream = new MemoryStream(_selectedFileBytes);
+            var map = await MapImportSvc.ImportAsync(stream, _selectedFileName, SelectedFormat);
+            StatusMessage      = $"✅ 已匯入：{map.Name}";
+            _selectedFileBytes = null;
+            _previewUrl        = string.Empty;
             await OnImported.InvokeAsync(map);
         }
         catch (Exception ex)
         {
-            _isError = true;
+            _isError      = true;
             StatusMessage = $"❌ 匯入失敗：{ex.Message}";
         }
     }

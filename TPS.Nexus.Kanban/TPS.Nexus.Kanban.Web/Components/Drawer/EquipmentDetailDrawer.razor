@@ -2,10 +2,18 @@
 @inject IEquipmentService EquipmentSvc
 @inject IOptions<KanbanModuleOptions> ModuleOpts
 
-<RadzenSidebar @bind-Expanded="IsOpen" Style="width:420px;position:fixed;right:0;top:0;height:100vh;z-index:50;background:#0d1b2a;border-left:1px solid #1a3a5c;">
+<div style="position:fixed;right:0;top:0;width:420px;height:100vh;z-index:50;
+            background:#0d1b2a;border-left:1px solid #1a3a5c;overflow-y:auto;
+            transform:@(IsOpen ? "translateX(0)" : "translateX(420px)");
+            transition:transform 0.25s ease;
+            pointer-events:@(IsOpen ? "auto" : "none")">
+    <button @onclick="@(() => IsOpenChanged.InvokeAsync(false))"
+            style="position:absolute;top:8px;right:12px;background:none;border:none;
+                   color:#888;font-size:1.2em;cursor:pointer;line-height:1;padding:2px 6px"
+            title="關閉">✕</button>
     @if (EquipmentData != null)
     {
-        <div style="padding:16px;border-bottom:1px solid #1a3a5c">
+        <div style="padding:16px;padding-right:36px;border-bottom:1px solid #1a3a5c">
             <div style="display:flex;align-items:center;gap:10px">
                 <EquipmentIconRenderer Equipment="@EquipmentData" />
                 <div>
@@ -21,6 +29,25 @@
         <RadzenTabs Style="height:calc(100vh - 80px);overflow:auto">
             <Tabs>
                 <RadzenTabsItem Text="當前數值">
+                    @if (EquipmentAlarms.Any())
+                    {
+                        <div style="margin:8px;padding:10px;background:rgba(127,0,0,.3);
+                                    border-radius:4px;border-left:3px solid #f44336">
+                            <div style="color:#f44336;font-weight:600;font-size:0.85em;margin-bottom:6px">
+                                ⚠ 告警（@EquipmentAlarms.Count() 筆）
+                            </div>
+                            @foreach (var alarm in EquipmentAlarms.OrderByDescending(a => (int)a.Level))
+                            {
+                                <div style="font-size:0.82em;color:#ffb3b3;padding:2px 0">
+                                    [@alarm.Level] @alarm.Message
+                                    <span style="color:#888;margin-left:4px">
+                                        @alarm.TriggeredAt.ToLocalTime().ToString("MM/dd HH:mm")
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    }
+
                     @if (LatestData?.Fields.Any() == true)
                     {
                         <RadzenDataGrid Data="@LatestData.Fields.ToList()" TItem="KeyValuePair<string,object?>"
@@ -96,7 +123,7 @@
             </Tabs>
         </RadzenTabs>
     }
-</RadzenSidebar>
+</div>
 
 @code {
     [Parameter] public bool IsOpen { get; set; }
@@ -106,6 +133,7 @@
     [Parameter] public DataResult? LatestData { get; set; }
     [Parameter] public IEnumerable<DataResult> HistoryData { get; set; } = Enumerable.Empty<DataResult>();
     [Parameter] public IEnumerable<EquipmentLinkConfig> LinkConfigs { get; set; } = Enumerable.Empty<EquipmentLinkConfig>();
+    [Parameter] public IEnumerable<AlarmRecord> EquipmentAlarms { get; set; } = Enumerable.Empty<AlarmRecord>();
 
     private Dictionary<int, List<DataResult>> TabData = new();
     private List<TrendPoint> ChartPoints = new();

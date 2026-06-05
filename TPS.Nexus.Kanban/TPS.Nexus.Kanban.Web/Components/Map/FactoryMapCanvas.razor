@@ -14,49 +14,101 @@
     return;
 }
 
-<div id="map-canvas"
-     class="kanban-map-container @(IsEditMode ? "kanban-edit-mode" : "")"
-     style="width:100%;height:@(CanvasHeight)px;position:relative;">
+<div style="display:flex;height:@(CanvasHeight)px">
 
-    <MapLayer Map="@CurrentMap" />
+    <div id="map-canvas"
+         class="kanban-map-container @(IsEditMode ? "kanban-edit-mode" : "")"
+         style="flex:1;min-width:0;height:100%;position:relative;">
 
-    <div class="kanban-equipment-layer">
-        @foreach (var widget in Widgets)
-        {
-            <EquipmentWidgetPanel
-                Widget="@widget"
-                EquipmentData="@GetEquipment(widget.EquipmentId)"
-                ActiveAlarm="@GetActiveAlarm(widget.EquipmentId)"
-                IsRunning="@GetIsRunning(widget.EquipmentId)"
-                OnClick="@((w) => HandleWidgetClick(w))"
-                OnHover="@((w) => HandleWidgetHover(w))"
-                OnHoverEnd="@HandleHoverEnd" />
-        }
+        <MapLayer Map="@CurrentMap" />
+
+        <div class="kanban-equipment-layer">
+            @foreach (var widget in Widgets.Where(w => GetEquipment(w.EquipmentId)?.MapName == CurrentMap?.Name))
+            {
+                <EquipmentWidgetPanel
+                    Widget="@widget"
+                    EquipmentData="@GetEquipment(widget.EquipmentId)"
+                    ActiveAlarm="@GetActiveAlarm(widget.EquipmentId)"
+                    IsRunning="@GetIsRunning(widget.EquipmentId)"
+                    OnClick="@((w) => HandleWidgetClick(w))"
+                    OnHover="@((w) => HandleWidgetHover(w))"
+                    OnHoverEnd="@HandleHoverEnd" />
+            }
+        </div>
+
+        <EquipmentTooltip
+            Widget="@HoveredWidget"
+            EquipmentData="@GetEquipment(HoveredWidget?.EquipmentId ?? 0)"
+            LatestData="@HoveredData" />
+
+        <EquipmentDetailDrawer
+            @bind-IsOpen="DrawerOpen"
+            Widget="@SelectedWidget"
+            EquipmentData="@GetEquipment(SelectedWidget?.EquipmentId ?? 0)"
+            LatestData="@SelectedData"
+            HistoryData="@HistoryData"
+            LinkConfigs="@SelectedLinkConfigs"
+            EquipmentAlarms="@(ActiveAlarms.Where(a => a.EquipmentId == (SelectedWidget?.EquipmentId ?? 0)))" />
     </div>
 
-    <EquipmentTooltip
-        Widget="@HoveredWidget"
-        EquipmentData="@GetEquipment(HoveredWidget?.EquipmentId ?? 0)"
-        LatestData="@HoveredData" />
+    @if (IsEditMode)
+    {
+        var mapEquip = AllEquipment
+            .Where(e => !string.IsNullOrEmpty(e.MapName) && e.MapName == CurrentMap?.Name)
+            .ToList();
+        if (mapEquip.Count > 0)
+        {
+            <div style="width:200px;flex-shrink:0;height:100%;
+                        border-left:1px solid #1a3a5c;background:rgba(13,27,42,.97);
+                        overflow-y:auto;padding:10px;box-sizing:border-box">
+                <div style="font-size:0.8em;color:#aaa;margin-bottom:8px;font-weight:500">
+                    地圖設備（@mapEquip.Count）
+                </div>
+                @foreach (var eq in mapEquip)
+                {
+                    var placed = Widgets.Any(w => w.EquipmentId == eq.Id);
+                    <div style="display:flex;align-items:center;gap:6px;padding:5px 0;
+                                border-bottom:1px solid rgba(255,255,255,.06)">
+                        <div style="flex-shrink:0">
+                            <EquipmentIconRenderer Equipment="@eq" />
+                        </div>
+                        <span style="font-size:0.8em;flex:1;overflow:hidden;
+                                     text-overflow:ellipsis;white-space:nowrap;
+                                     color:#ddd">@eq.Name</span>
+                        @if (placed)
+                        {
+                            <span style="font-size:0.75em;color:#4caf50;flex-shrink:0">✓</span>
+                        }
+                        else
+                        {
+                            <RadzenButton Text="+" Size="ButtonSize.ExtraSmall"
+                                          ButtonStyle="ButtonStyle.Secondary"
+                                          Click="@(() => AddEquipmentToCanvas(eq))" />
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
 
-    <EquipmentDetailDrawer
-        @bind-IsOpen="DrawerOpen"
-        Widget="@SelectedWidget"
-        EquipmentData="@GetEquipment(SelectedWidget?.EquipmentId ?? 0)"
-        LatestData="@SelectedData"
-        HistoryData="@HistoryData"
-        LinkConfigs="@SelectedLinkConfigs" />
 </div>
 
 @code {
     [Parameter, EditorRequired] public int MapId { get; set; }
     [Parameter] public bool IsEditMode { get; set; }
     [Parameter] public int CanvasHeight { get; set; } = 600;
+    [Parameter] public EventCallback<int?> OnWorkingVersionChanged { get; set; }
 
     private FactoryMap? CurrentMap;
     private List<EquipmentWidget> Widgets = new();
     private List<Equipment> AllEquipment = new();
     private List<AlarmRecord> ActiveAlarms = new();
+
+    private int?  _publishedVersionId;
+    private int?  _editVersionId;
+    private int   _prevMapId       = -1;
+    private bool  _needsDragReinit;
+    private int   _loadVersion;
 
     private EquipmentWidget? HoveredWidget;
     private EquipmentWidget? SelectedWidget;
@@ -76,36 +128,141 @@
         // V-1: markup @if guard does not prevent lifecycle methods from running;
         // guard here so service calls are skipped when MapId is not yet resolved.
         if (MapId <= 0) return;
-
         DotNetRef = DotNetObjectReference.Create(this);
+        _prevMapId = MapId;
+        await LoadMapDataAsync();
+        _ = PollLoopAsync(_cts.Token);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (MapId <= 0 || MapId == _prevMapId) return;
+        _prevMapId = MapId;
+        DrawerOpen = false;
+        HoveredWidget = null;
+        SelectedWidget = null;
+        await LoadMapDataAsync();
+    }
+
+    private async Task LoadMapDataAsync()
+    {
+        // Capture mapId and a version token at the start. If a newer load starts while
+        // this one is awaiting (Blazor Server yields between awaits even for synchronous
+        // tasks), the stale load detects the mismatch and discards its results rather than
+        // overwriting state that a newer load already set correctly.
+        var mapId = MapId;
+        var token = ++_loadVersion;
 
         var maps = await MapImportSvc.GetAllAsync();
-        CurrentMap = maps.FirstOrDefault(m => m.Id == MapId);
+        if (_loadVersion != token) return;
 
-        var published = await LayoutSvc.GetPublishedVersionAsync(MapId);
+        var newCurrentMap = maps.FirstOrDefault(m => m.Id == mapId);
+
+        var published = await LayoutSvc.GetPublishedVersionAsync(mapId);
+        if (_loadVersion != token) return;
+
+        List<EquipmentWidget> newWidgets;
+        int? newPublishedId;
         if (published != null)
         {
-            Widgets = (await EquipmentSvc.GetWidgetsByVersionAsync(published.Id)).ToList();
+            newPublishedId = published.Id;
+            var w = await EquipmentSvc.GetWidgetsByVersionAsync(published.Id);
+            if (_loadVersion != token) return;
+            newWidgets = w.ToList();
         }
-        AllEquipment = (await EquipmentSvc.GetAllEquipmentAsync()).ToList();
-        ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
+        else
+        {
+            newPublishedId = null;
+            newWidgets = new();
+        }
 
-        _ = PollLoopAsync(_cts.Token);
+        var allEq = await EquipmentSvc.GetAllEquipmentAsync();
+        if (_loadVersion != token) return;
+
+        var alarms = await AlarmSvc.GetActiveAlarmsAsync();
+        if (_loadVersion != token) return;
+
+        // All data fetched — update state atomically so no intermediate partial-state render.
+        CurrentMap          = newCurrentMap;
+        _publishedVersionId = newPublishedId;
+        Widgets             = newWidgets;
+        AllEquipment        = allEq.ToList();
+        ActiveAlarms        = alarms.ToList();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (IsEditMode && !_prevIsEditMode)
         {
+            await BeginEditSessionAsync();
+            _needsDragReinit = false;
+            try { await JS.InvokeVoidAsync("kanbanDrag.init", "map-canvas", DotNetRef); }
+            catch (JSException) { }
+        }
+        else if (IsEditMode && _needsDragReinit)
+        {
+            _needsDragReinit = false;
             try { await JS.InvokeVoidAsync("kanbanDrag.init", "map-canvas", DotNetRef); }
             catch (JSException) { }
         }
         else if (!IsEditMode && _prevIsEditMode)
         {
+            await EndEditSessionAsync();
             try { await JS.InvokeVoidAsync("kanbanDrag.destroy"); }
             catch (JSException) { }
         }
         _prevIsEditMode = IsEditMode;
+    }
+
+    private async Task BeginEditSessionAsync()
+    {
+        if (MapId <= 0) return;
+        try
+        {
+            var draft = await LayoutSvc.SaveDraftAsync(MapId, "{}", "系統");
+            _editVersionId = draft.Id;
+
+            if (_publishedVersionId.HasValue)
+            {
+                var published = await EquipmentSvc.GetWidgetsByVersionAsync(_publishedVersionId.Value);
+                foreach (var w in published)
+                {
+                    await EquipmentSvc.SaveWidgetAsync(new EquipmentWidget
+                    {
+                        EquipmentId     = w.EquipmentId,
+                        LayoutVersionId = draft.Id,
+                        PositionX       = w.PositionX,
+                        PositionY       = w.PositionY,
+                        Width           = w.Width,
+                        Height          = w.Height,
+                    });
+                }
+                Widgets = (await EquipmentSvc.GetWidgetsByVersionAsync(draft.Id)).ToList();
+            }
+
+            await OnWorkingVersionChanged.InvokeAsync(_editVersionId);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { }
+    }
+
+    private async Task EndEditSessionAsync()
+    {
+        _editVersionId = null;
+        await OnWorkingVersionChanged.InvokeAsync(null);
+
+        var published = await LayoutSvc.GetPublishedVersionAsync(MapId);
+        if (published != null)
+        {
+            _publishedVersionId = published.Id;
+            Widgets = (await EquipmentSvc.GetWidgetsByVersionAsync(published.Id)).ToList();
+        }
+        else
+        {
+            _publishedVersionId = null;
+            Widgets = new();
+        }
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task PollLoopAsync(CancellationToken ct)
@@ -152,6 +309,11 @@
 
     private async Task HandleWidgetClick(EquipmentWidget widget)
     {
+        if (DrawerOpen && SelectedWidget?.EquipmentId == widget.EquipmentId)
+        {
+            DrawerOpen = false;
+            return;
+        }
         SelectedWidget = widget;
         try
         {
@@ -173,7 +335,48 @@
     private void HandleHoverEnd()
     {
         HoveredWidget = null;
-        HoveredData = null;
+        HoveredData   = null;
+    }
+
+    private async Task AddEquipmentToCanvas(Equipment eq)
+    {
+        // In edit mode use the draft version; fall back to auto-creating a published version
+        // only when there is genuinely no published version yet (brand-new map).
+        var versionId = _editVersionId;
+        if (versionId == null)
+        {
+            if (_publishedVersionId == null)
+            {
+                try
+                {
+                    var d = await LayoutSvc.SaveDraftAsync(MapId, "{}", "系統");
+                    var p = await LayoutSvc.PublishAsync(d.Id);
+                    _publishedVersionId = p.Id;
+                }
+                catch { return; }
+            }
+            versionId = _publishedVersionId;
+        }
+
+        var widget = new EquipmentWidget
+        {
+            EquipmentId     = eq.Id,
+            LayoutVersionId = versionId.Value,
+            PositionX       = 120,
+            PositionY       = 120,
+            Width           = 80,
+            Height          = 100,
+        };
+        try
+        {
+            await EquipmentSvc.SaveWidgetAsync(widget);
+            var loadVer = _editVersionId ?? _publishedVersionId;
+            if (loadVer.HasValue)
+                Widgets = (await EquipmentSvc.GetWidgetsByVersionAsync(loadVer.Value)).ToList();
+            _needsDragReinit = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { }
     }
 
     private Equipment? GetEquipment(int equipmentId)

@@ -9,6 +9,7 @@ public class Equipment
     public string? Category { get; set; }
     public string? Tag { get; set; }
     public string? Description { get; set; }
+    public string? MapName { get; set; }
     public IconType IconType { get; set; }
     public string? IconValue { get; set; }
 }

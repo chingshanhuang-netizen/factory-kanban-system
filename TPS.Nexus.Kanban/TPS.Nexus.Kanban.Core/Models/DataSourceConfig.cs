@@ -7,6 +7,7 @@ public class DataSourceConfig
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public DataSourceType SourceType { get; set; }
+    public string? DataType { get; set; }
     public string? ConnectionString { get; set; }
     public string? FilePath { get; set; }
     public string? QueryOrPath { get; set; }

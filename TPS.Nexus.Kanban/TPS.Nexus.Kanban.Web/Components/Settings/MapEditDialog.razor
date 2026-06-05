@@ -1,0 +1,95 @@
+@inject IMapImportService MapSvc
+@inject NotificationService NotifySvc
+@inject DialogService DialogSvc
+
+<RadzenStack Gap="12px" Style="padding:4px;min-width:380px">
+
+    <RadzenFormField Text="地圖名稱 *" Variant="Variant.Outlined">
+        <RadzenTextBox @bind-Value="_edit.Name" Style="width:100%" />
+    </RadzenFormField>
+
+    <RadzenFormField Text="樓層" Variant="Variant.Outlined">
+        <RadzenTextBox @bind-Value="_edit.Floor" Placeholder="例如：1F" Style="width:100%" />
+    </RadzenFormField>
+
+    <RadzenFormField Text="區域" Variant="Variant.Outlined">
+        <RadzenTextBox @bind-Value="_edit.Area" Placeholder="例如：主廠區" Style="width:100%" />
+    </RadzenFormField>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
+        <RadzenCheckBox @bind-Value="_edit.CarouselEnabled" />
+        <span style="color:#ddd;font-size:0.9em">加入輪播</span>
+    </div>
+
+    @if (_edit.CarouselEnabled)
+    {
+        <RadzenFormField Text="輪播次序" Variant="Variant.Outlined">
+            <RadzenNumeric @bind-Value="_edit.CarouselOrder" Min="1" Style="width:100%" />
+        </RadzenFormField>
+
+        <RadzenFormField Text="輪播時間（秒）" Variant="Variant.Outlined">
+            <RadzenNumeric @bind-Value="_edit.CarouselSeconds" Min="1" Style="width:100%" />
+        </RadzenFormField>
+    }
+
+    @if (!string.IsNullOrEmpty(_edit.FilePath) &&
+         (_edit.FormatType is MapFormatType.Png or MapFormatType.Jpg or MapFormatType.Svg))
+    {
+        <div style="padding:8px;background:rgba(255,255,255,.04);border-radius:4px;
+                    border:1px solid rgba(255,255,255,.12);text-align:center">
+            <div style="color:#aaa;font-size:0.8em;margin-bottom:6px">目前地圖圖面</div>
+            <img src="@_edit.FilePath" alt="地圖預覽"
+                 style="max-width:100%;max-height:150px;object-fit:contain" />
+        </div>
+    }
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+        <RadzenButton Text="取消" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />
+        <RadzenButton Text="儲存" ButtonStyle="ButtonStyle.Primary" Click="@Save" />
+    </div>
+
+</RadzenStack>
+
+@code {
+    [Parameter] public FactoryMap Map { get; set; } = new();
+
+    private FactoryMap _edit = new();
+
+    protected override void OnParametersSet()
+    {
+        _edit = new FactoryMap
+        {
+            Id              = Map.Id,
+            Name            = Map.Name,
+            Floor           = Map.Floor,
+            Area            = Map.Area,
+            FormatType      = Map.FormatType,
+            FilePath        = Map.FilePath,
+            ThumbnailPath   = Map.ThumbnailPath,
+            CreatedAt       = Map.CreatedAt,
+            CarouselEnabled = Map.CarouselEnabled,
+            CarouselOrder   = Map.CarouselOrder,
+            CarouselSeconds = Map.CarouselSeconds,
+        };
+    }
+
+    private void Cancel() => DialogSvc.Close(false);
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_edit.Name))
+        {
+            NotifySvc.Notify(NotificationSeverity.Warning, "名稱不能為空");
+            return;
+        }
+        try
+        {
+            await MapSvc.UpdateAsync(_edit);
+            DialogSvc.Close(true);
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "儲存失敗", ex.Message);
+        }
+    }
+}
