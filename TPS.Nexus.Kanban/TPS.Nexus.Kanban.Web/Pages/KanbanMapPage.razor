@@ -244,11 +244,11 @@
         {
             IsEditMode = false;
             _resumeDraftId = null;
-            StartCarousel();
+            StartCarousel(_carouselRemainingSeconds);
         }
     }
 
-    private void StartCarousel()
+    private void StartCarousel(int resumeFrom = 0)
     {
         StopCarousel();
         if (IsEditMode || CurrentMap == null || !CurrentMap.CarouselEnabled) return;
@@ -261,10 +261,10 @@
 
         if (carouselMaps.Count == 0) return;
 
-        var seconds  = CurrentMap.CarouselSeconds > 0 ? CurrentMap.CarouselSeconds : 10;
-        var current  = MapId;
-        _carouselCts = new CancellationTokenSource();
-        _ = CarouselTickAsync(current, carouselMaps, seconds, _carouselCts.Token);
+        var seconds      = CurrentMap.CarouselSeconds > 0 ? CurrentMap.CarouselSeconds : 10;
+        var startSeconds = resumeFrom > 0 ? Math.Min(resumeFrom, seconds) : seconds;
+        _carouselCts     = new CancellationTokenSource();
+        _ = CarouselTickAsync(MapId, carouselMaps, startSeconds, _carouselCts.Token);
     }
 
     private async Task CarouselTickAsync(int currentId, List<FactoryMap> maps, int seconds, CancellationToken ct)
@@ -293,7 +293,7 @@
     {
         _carouselPaused = !_carouselPaused;
         if (_carouselPaused) StopCarousel();
-        else                 StartCarousel();
+        else                 StartCarousel(_carouselRemainingSeconds);
     }
 
     private void StopCarousel()

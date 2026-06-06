@@ -35,6 +35,12 @@
                                   ButtonStyle="@(_showEquipCols ? ButtonStyle.Info : ButtonStyle.Light)"
                                   Size="ButtonSize.Small"
                                   Click="@(() => _showEquipCols = !_showEquipCols)" />
+                    <span style="flex:1"></span>
+                    <input type="text" @bind="_equipSearch" @bind:event="oninput"
+                           placeholder="🔍 搜尋設備..."
+                           style="background:rgba(255,255,255,.07);border:1px solid #2a4a6c;
+                                  color:#c8d8e8;border-radius:4px;padding:4px 10px;
+                                  font-size:0.85em;outline:none;width:180px" />
                 </div>
 
                 @if (_showEquipCols)
@@ -44,8 +50,15 @@
                 }
 
                 <RadzenDataGrid @key="@_equipGridKey" @ref="_equipGrid"
-                                Data="@AllEquipment" TItem="Equipment"
-                                AllowColumnResize="true"
+                                Data="@FilteredEquipment" TItem="Equipment"
+                                AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                                AllowPaging="true" PageSize="@_equipPageSize"
+                                PageSizeOptions="@(new int[]{10,20,50,100})"
+                                Page="@((args) => _equipPage = args.PageIndex)"
+                                PageSizeChanged="@((size) => { _equipPageSize = size; _equipPage = 0; })"
+                                ShowPagingSummary="true" PagingSummaryFormat="@EquipSummary"
+                                AllowColumnResize="true" class="kanban-light-grid"
+                                Style="height: calc(100vh - 242px)"
                                 ColumnResized="@OnEquipColResized">
                     <Columns>
                         @foreach (var colId in _equipCols.Order)
@@ -117,6 +130,12 @@
                                   ButtonStyle="@(_showDsCols ? ButtonStyle.Info : ButtonStyle.Light)"
                                   Size="ButtonSize.Small"
                                   Click="@(() => _showDsCols = !_showDsCols)" />
+                    <span style="flex:1"></span>
+                    <input type="text" @bind="_dsSearch" @bind:event="oninput"
+                           placeholder="🔍 搜尋資料來源..."
+                           style="background:rgba(255,255,255,.07);border:1px solid #2a4a6c;
+                                  color:#c8d8e8;border-radius:4px;padding:4px 10px;
+                                  font-size:0.85em;outline:none;width:180px" />
                 </div>
 
                 @if (_showDsCols)
@@ -126,8 +145,15 @@
                 }
 
                 <RadzenDataGrid @key="@_dsGridKey" @ref="_dsGrid"
-                                Data="@AllDataSources" TItem="DataSourceConfig"
-                                AllowColumnResize="true"
+                                Data="@FilteredDataSources" TItem="DataSourceConfig"
+                                AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                                AllowPaging="true" PageSize="@_dsPageSize"
+                                PageSizeOptions="@(new int[]{10,20,50,100})"
+                                Page="@((args) => _dsPage = args.PageIndex)"
+                                PageSizeChanged="@((size) => { _dsPageSize = size; _dsPage = 0; })"
+                                ShowPagingSummary="true" PagingSummaryFormat="@DsSummary"
+                                AllowColumnResize="true" class="kanban-light-grid"
+                                Style="height: calc(100vh - 242px)"
                                 ColumnResized="@OnDsColResized">
                     <Columns>
                         @foreach (var colId in _dsCols.Order)
@@ -321,6 +347,12 @@
                                       ButtonStyle="@(_showMapCols ? ButtonStyle.Info : ButtonStyle.Light)"
                                       Size="ButtonSize.Small"
                                       Click="@(() => _showMapCols = !_showMapCols)" />
+                        <span style="flex:1"></span>
+                        <input type="text" @bind="_mapSearch" @bind:event="oninput"
+                               placeholder="🔍 搜尋地圖..."
+                               style="background:rgba(255,255,255,.07);border:1px solid #2a4a6c;
+                                      color:#c8d8e8;border-radius:4px;padding:4px 10px;
+                                      font-size:0.85em;outline:none;width:180px" />
                     </div>
 
                     @if (_showMapCols)
@@ -329,8 +361,15 @@
                                              OnReordered="@(() => _mapGridKey++)" />
                     }
 
-                    <RadzenDataGrid @key="@_mapGridKey" Data="@AllMaps" TItem="FactoryMap"
-                                    AllowColumnResize="true"
+                    <RadzenDataGrid @key="@_mapGridKey" Data="@FilteredMaps" TItem="FactoryMap"
+                                    AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                                    AllowPaging="true" PageSize="@_mapPageSize"
+                                    PageSizeOptions="@(new int[]{10,20,50,100})"
+                                    Page="@((args) => _mapPage = args.PageIndex)"
+                                    PageSizeChanged="@((size) => { _mapPageSize = size; _mapPage = 0; })"
+                                    ShowPagingSummary="true" PagingSummaryFormat="@MapSummary"
+                                    AllowColumnResize="true" class="kanban-light-grid"
+                                    Style="height: calc(100vh - 420px)"
                                     ColumnResized="@OnMapColResized">
                         <Columns>
                             @foreach (var colId in _mapCols.Order)
@@ -440,13 +479,54 @@
     private GridColumnPrefs _dsCols    = null!;
     private GridColumnPrefs _mapCols   = null!;
 
-    private bool _showEquipCols;
-    private bool _showDsCols;
-    private bool _showMapCols;
-    private int  _equipGridKey;
-    private int  _dsGridKey;
-    private int  _mapGridKey;
-    private bool _prefsLoaded;
+    private bool   _showEquipCols;
+    private bool   _showDsCols;
+    private bool   _showMapCols;
+    private int    _equipGridKey;
+    private int    _dsGridKey;
+    private int    _mapGridKey;
+    private bool   _prefsLoaded;
+    private string _equipSearch = "";
+    private string _dsSearch    = "";
+    private string _mapSearch   = "";
+
+    // ── Pager state ─────────────────────────────────────────────────────────
+    private int _equipPage = 0, _equipPageSize = 10;
+    private int _dsPage    = 0, _dsPageSize    = 10;
+    private int _mapPage   = 0, _mapPageSize   = 10;
+
+    private string EquipSummary => GridPageSummary(_equipPage, _equipPageSize, FilteredEquipment.Count());
+    private string DsSummary    => GridPageSummary(_dsPage,    _dsPageSize,    FilteredDataSources.Count());
+    private string MapSummary   => GridPageSummary(_mapPage,   _mapPageSize,   FilteredMaps.Count());
+
+    private static string GridPageSummary(int page0, int size, int total)
+    {
+        var pages = total == 0 ? 1 : (int)Math.Ceiling((double)total / size);
+        return $"Page {page0 + 1} of {pages} ({total} Items)";
+    }
+
+    private IEnumerable<Equipment> FilteredEquipment => string.IsNullOrWhiteSpace(_equipSearch)
+        ? AllEquipment
+        : AllEquipment.Where(e =>
+            (e.Name?.Contains(_equipSearch,     StringComparison.OrdinalIgnoreCase) == true) ||
+            (e.Tag?.Contains(_equipSearch,      StringComparison.OrdinalIgnoreCase) == true) ||
+            (e.Category?.Contains(_equipSearch, StringComparison.OrdinalIgnoreCase) == true) ||
+            (e.MapName?.Contains(_equipSearch,  StringComparison.OrdinalIgnoreCase) == true));
+
+    private IEnumerable<DataSourceConfig> FilteredDataSources => string.IsNullOrWhiteSpace(_dsSearch)
+        ? AllDataSources
+        : AllDataSources.Where(d =>
+            (d.Name?.Contains(_dsSearch,        StringComparison.OrdinalIgnoreCase) == true) ||
+            (d.DataType?.Contains(_dsSearch,    StringComparison.OrdinalIgnoreCase) == true) ||
+            (d.QueryOrPath?.Contains(_dsSearch, StringComparison.OrdinalIgnoreCase) == true) ||
+            d.SourceType.ToString().Contains(_dsSearch, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<FactoryMap> FilteredMaps => string.IsNullOrWhiteSpace(_mapSearch)
+        ? AllMaps
+        : AllMaps.Where(m =>
+            (m.Name?.Contains(_mapSearch,   StringComparison.OrdinalIgnoreCase) == true) ||
+            (m.Floor?.Contains(_mapSearch,  StringComparison.OrdinalIgnoreCase) == true) ||
+            (m.Area?.Contains(_mapSearch,   StringComparison.OrdinalIgnoreCase) == true));
     // ──────────────────────────────────────────────────────────────────────
 
     private IEnumerable<string> _allCategories => AllEquipment

@@ -50,8 +50,22 @@
 
                     @if (LatestData?.Fields.Any() == true)
                     {
-                        <RadzenDataGrid Data="@LatestData.Fields.ToList()" TItem="KeyValuePair<string,object?>"
-                                        Style="font-size:0.85em">
+                        <div style="margin:6px 8px 4px;display:flex;justify-content:flex-end">
+                            <input type="text" @bind="_fieldSearch" @bind:event="oninput"
+                                   placeholder="🔍 搜尋參數..."
+                                   style="background:rgba(255,255,255,.07);border:1px solid #2a4a6c;
+                                          color:#c8d8e8;border-radius:4px;padding:3px 8px;
+                                          font-size:0.82em;outline:none;width:150px" />
+                        </div>
+                        <RadzenDataGrid Data="@FilteredFields" TItem="KeyValuePair<string,object?>"
+                                        Style="font-size:0.85em; height: calc(100vh - 360px)"
+                                        AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                                        AllowPaging="true" PageSize="@_fieldPageSize"
+                                        PageSizeOptions="@(new int[]{10,20,50,100})"
+                                        Page="@((args) => _fieldPage = args.PageIndex)"
+                                        PageSizeChanged="@((size) => { _fieldPageSize = size; _fieldPage = 0; })"
+                                        ShowPagingSummary="true" PagingSummaryFormat="@FieldPageSummary"
+                                        class="kanban-light-grid">
                             <Columns>
                                 <RadzenDataGridColumn TItem="KeyValuePair<string,object?>"
                                                       Property="Key" Title="參數" Width="120px" />
@@ -80,7 +94,24 @@
                             case LinkType.AlarmHistory:
                                 @if (TabData.TryGetValue(linkConfig.Id, out var rows) && rows.Any())
                                 {
-                                    <RadzenDataGrid Data="@rows" TItem="DataResult" Style="font-size:0.82em">
+                                    <div style="margin:4px 8px;display:flex;justify-content:flex-end">
+                                        <input type="text"
+                                               value="@TabSearch(linkConfig.Id)"
+                                               @oninput="@(e => SetTabSearch(linkConfig.Id, e.Value?.ToString() ?? ""))"
+                                               placeholder="🔍 搜尋..."
+                                               style="background:rgba(255,255,255,.07);border:1px solid #2a4a6c;
+                                                      color:#c8d8e8;border-radius:4px;padding:3px 8px;
+                                                      font-size:0.82em;outline:none;width:140px" />
+                                    </div>
+                                    <RadzenDataGrid Data="@FilteredTabRows(linkConfig.Id, rows)" TItem="DataResult"
+                                                    Style="font-size:0.82em; height: calc(100vh - 360px)"
+                                                    AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                                                    AllowPaging="true" PageSize="@TabPageSize(linkConfig.Id)"
+                                                    PageSizeOptions="@(new int[]{10,20,50,100})"
+                                                    Page="@((args) => _tabPage[linkConfig.Id] = args.PageIndex)"
+                                                    PageSizeChanged="@((size) => { _tabPageSize[linkConfig.Id] = size; _tabPage[linkConfig.Id] = 0; })"
+                                                    ShowPagingSummary="true" PagingSummaryFormat="@TabPageSummary(linkConfig.Id, FilteredTabRows(linkConfig.Id, rows).Count())"
+                                                    class="kanban-light-grid">
                                         <Columns>
                                             @foreach (var key in rows.First().Fields.Keys.Take(ModuleOpts.Value.TabDataColumnsMaxCount))
                                             {
@@ -137,8 +168,56 @@
 
     private Dictionary<int, List<DataResult>> TabData = new();
     private List<TrendPoint> ChartPoints = new();
+    private string _fieldSearch   = "";
+    private int    _fieldPage     = 0;
+    private int    _fieldPageSize = 10;
+    private Dictionary<int, string> _tabSearch    = new();
+    private Dictionary<int, int>    _tabPage      = new();
+    private Dictionary<int, int>    _tabPageSize  = new();
+
+    private string FieldPageSummary
+    {
+        get
+        {
+            var total = FilteredFields.Count();
+            var pages = total == 0 ? 1 : (int)Math.Ceiling((double)total / _fieldPageSize);
+            return $"Page {_fieldPage + 1} of {pages} ({total} Items)";
+        }
+    }
+
+    private string TabPageSummary(int id, int rowCount)
+    {
+        var size  = _tabPageSize.TryGetValue(id, out var s) ? s : 10;
+        var page0 = _tabPage.TryGetValue(id, out var p) ? p : 0;
+        var pages = rowCount == 0 ? 1 : (int)Math.Ceiling((double)rowCount / size);
+        return $"Page {page0 + 1} of {pages} ({rowCount} Items)";
+    }
+
+    private int TabPageSize(int id) => _tabPageSize.TryGetValue(id, out var s) ? s : 10;
 
     public record TrendPoint(string Label, double Value);
+
+    private IEnumerable<KeyValuePair<string, object?>> FilteredFields =>
+        LatestData?.Fields is null
+            ? Enumerable.Empty<KeyValuePair<string, object?>>()
+            : string.IsNullOrWhiteSpace(_fieldSearch)
+                ? LatestData.Fields
+                : LatestData.Fields.Where(kv =>
+                    kv.Key.Contains(_fieldSearch, StringComparison.OrdinalIgnoreCase));
+
+    private string TabSearch(int id) =>
+        _tabSearch.TryGetValue(id, out var s) ? s : "";
+
+    private void SetTabSearch(int id, string val) =>
+        _tabSearch[id] = val;
+
+    private IEnumerable<DataResult> FilteredTabRows(int id, List<DataResult> rows)
+    {
+        var term = TabSearch(id);
+        if (string.IsNullOrWhiteSpace(term)) return rows;
+        return rows.Where(r => r.Fields.Values.Any(v =>
+            v?.ToString()?.Contains(term, StringComparison.OrdinalIgnoreCase) == true));
+    }
 
     // W-5: allow only safe URL schemes — javascript: and data: URIs must be rejected
     private static string? SanitizeUrl(string? url) =>
@@ -152,6 +231,11 @@
     {
         if (!IsOpen || EquipmentData == null) return;
 
+        _fieldSearch = "";
+        _fieldPage   = 0;
+        _tabSearch.Clear();
+        _tabPage.Clear();
+        _tabPageSize.Clear();
         TabData.Clear();
         var allConfigs = (await EquipmentSvc.GetAllDataSourceConfigsAsync())
                              .ToDictionary(c => c.Id);

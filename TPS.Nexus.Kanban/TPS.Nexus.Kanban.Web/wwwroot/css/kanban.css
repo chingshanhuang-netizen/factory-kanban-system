@@ -143,3 +143,175 @@
     border-style: solid !important;
     box-shadow: 0 0 0 2px rgba(79,195,247,.35), 0 0 10px rgba(79,195,247,.25) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Light grid theme — white card grid
+   Apply class="kanban-light-grid" to any RadzenDataGrid
+   ═══════════════════════════════════════════════════════════════ */
+.kanban-light-grid {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #c6e2dc !important;
+    border-radius: 6px;
+    overflow: visible;
+    /* Override Radzen CSS variables so all internal styles pick up light colors */
+    --rz-grid-background-color: #ffffff;
+    --rz-grid-cell-color: #000000;
+    --rz-grid-header-background-color: #daf0ec;
+    --rz-grid-header-color: #0a6e64;
+    --rz-grid-header-sorted-background-color: #c5e8e2;
+    --rz-grid-header-font-size: 15px;
+    --rz-grid-header-font-weight: 700;
+    --rz-grid-header-text-transform: none;
+    --rz-grid-filter-background-color: #f6fcfb;
+    --rz-grid-filter-color: #444;
+    --rz-grid-foot-background-color: #f2f9f7;
+    --rz-grid-foot-cell-color: #444;
+    --rz-grid-hover-background-color: #d0eee8;
+    --rz-grid-hover-color: #000000;
+    --rz-grid-selected-background-color: #b8e8df;
+    --rz-grid-selected-color: #111;
+    /* compact row height */
+    --rz-grid-cell-padding: 0.35rem 0.6rem;
+    --rz-grid-header-cell-padding: 0.45rem 0;
+    --rz-grid-header-padding: 0.6rem;
+    --rz-grid-filter-padding: 0.3rem 0.5rem;
+}
+
+/* ── Column header row — light teal bg, larger bold teal text ── */
+.kanban-light-grid .rz-grid-table thead th {
+    background: #daf0ec !important;
+    background-color: #daf0ec !important;
+    border-bottom: 2px solid #8eccc4 !important;
+}
+.kanban-light-grid .rz-grid-table thead th .rz-column-title,
+.kanban-light-grid .rz-grid-table thead th .rz-column-title-content,
+.kanban-light-grid .rz-grid-table thead th .rz-column-title-content span {
+    color: #0a6e64 !important;
+    font-weight: 700 !important;
+    font-size: 15px !important;
+}
+
+/* sort icon teal */
+.kanban-light-grid .rz-sort-icon,
+.kanban-light-grid .rz-sorted-asc-icon,
+.kanban-light-grid .rz-sorted-desc-icon { color: #0c8070 !important; }
+
+/* ── Filter row background ── */
+.kanban-light-grid .rz-grid-table thead tr:nth-child(2) th,
+.kanban-light-grid thead tr:nth-child(2) th {
+    background: #f6fcfb !important;
+    background-color: #f6fcfb !important;
+    border-bottom: 1px solid #b8dcd6 !important;
+}
+
+/* ── Magnifying glass icon — Radzen filter cell is .rz-cell-filter ── */
+.kanban-light-grid .rz-cell-filter {
+    position: relative;
+}
+.kanban-light-grid .rz-cell-filter::before {
+    content: '🔍';
+    position: absolute;
+    left: 7px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75em;
+    pointer-events: none;
+    z-index: 1;
+    line-height: 1;
+}
+
+/* ── Filter inputs — transparent bg so even-row cells show through ── */
+.kanban-light-grid .rz-cell-filter .rz-textbox,
+.kanban-light-grid .rz-cell-filter .rz-inputtext,
+.kanban-light-grid thead tr:nth-child(2) input {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 1px solid #b0ceca !important;
+    color: #111 !important;
+    border-radius: 3px;
+    padding: 0.2rem 0.4rem 0.2rem 24px !important;
+    height: 26px !important;
+    font-size: 0.83em;
+}
+.kanban-light-grid .rz-cell-filter .rz-button { color: #0c8070 !important; }
+
+/* ── Data cells — black text, white background, compact height ── */
+.kanban-light-grid .rz-grid-table td,
+.kanban-light-grid tbody tr.rz-data-row td {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border-bottom: 1px solid #e0f0ec !important;
+    padding: 0.35rem 0.6rem !important;
+}
+/* rz-cell-data must be transparent so it inherits the td row colour */
+.kanban-light-grid .rz-grid-table td .rz-cell-data {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: inherit !important;
+}
+.kanban-light-grid .rz-grid-table thead th {
+    padding: 0.45rem 0.6rem !important;
+}
+
+/* alternating rows — td background; rz-cell-data inherits via transparent */
+.kanban-light-grid .rz-grid-table tbody tr:nth-child(even) td {
+    background: #eef8f5 !important;
+    background-color: #eef8f5 !important;
+}
+
+/* hover */
+.kanban-light-grid .rz-grid-table tbody tr:hover td {
+    background: #d0eee8 !important;
+    background-color: #d0eee8 !important;
+}
+
+/* selected / highlighted rows */
+.kanban-light-grid .rz-selectable tbody tr.rz-state-highlight > td,
+.kanban-light-grid tbody tr.rz-state-selected td {
+    background: #b8e8df !important;
+    color: #111 !important;
+}
+
+/* empty message */
+.kanban-light-grid .rz-grid-empty-text { background: #fff !important; color: #888 !important; }
+
+/* ── Pager ── pages far-left, summary far-right ── */
+.kanban-light-grid .rz-pager {
+    background: #f2f9f7 !important;
+    border-top: 1px solid #b8dcd6 !important;
+    color: #444 !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+}
+.kanban-light-grid .rz-pager .rz-pager-element,
+.kanban-light-grid .rz-pager .rz-button {
+    color: #0c8070 !important;
+    background: transparent !important;
+    border: none !important;
+}
+.kanban-light-grid .rz-pager .rz-state-active {
+    background: #0c9e85 !important;
+    color: #fff !important;
+    border-radius: 50% !important;
+    min-width: 28px; min-height: 28px;
+}
+/* order: pages(1) → dropdown(2) → summary pushed to far-right via margin-left:auto */
+.kanban-light-grid .rz-pager .rz-pager-pages  { order: 1; }
+.kanban-light-grid .rz-pager .rz-dropdown,
+.kanban-light-grid .rz-pager select            { order: 2; }
+.kanban-light-grid .rz-pager .rz-pager-summary { order: 3; margin-left: auto; color: #555 !important; }
+.kanban-light-grid .rz-pager select,
+.kanban-light-grid .rz-pager .rz-dropdown {
+    background: #fff !important;
+    color: #333 !important;
+    border: 1px solid #b0ceca !important;
+    border-radius: 4px;
+}
+
+/* ── Scrollbar ── */
+.kanban-light-grid .rz-grid-table-wrapper { overflow: auto !important; }
+.kanban-light-grid .rz-grid-table-wrapper::-webkit-scrollbar { width:6px; height:6px; }
+.kanban-light-grid .rz-grid-table-wrapper::-webkit-scrollbar-track { background:#f0f8f5; }
+.kanban-light-grid .rz-grid-table-wrapper::-webkit-scrollbar-thumb { background:#98cac3; border-radius:3px; }

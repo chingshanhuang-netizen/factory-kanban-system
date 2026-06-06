@@ -18,6 +18,16 @@ public class DemoMapImportService : IMapImportService
             FilePath   = "/maps/demo-floor.svg",
             CreatedAt  = DateTime.UtcNow.AddDays(-30),
         },
+        new()
+        {
+            Id         = 2,
+            Name       = "廠區二樓平面圖",
+            Floor      = "2F",
+            Area       = "主廠區",
+            FormatType = MapFormatType.Svg,
+            FilePath   = "/maps/demo-floor.svg",
+            CreatedAt  = DateTime.UtcNow.AddDays(-15),
+        },
     };
 
     public Task<FactoryMap> ImportAsync(Stream file, string fileName, MapFormatType format)

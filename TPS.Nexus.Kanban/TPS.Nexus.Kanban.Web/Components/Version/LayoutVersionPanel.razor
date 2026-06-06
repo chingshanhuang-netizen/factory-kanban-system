@@ -6,7 +6,21 @@
     <div style="color:#f44336;font-size:0.82em;margin-bottom:6px">⚠ 回溯失敗：@_rollbackError</div>
 }
 
-<RadzenDataGrid Data="@Versions" TItem="LayoutVersion" Style="font-size:0.85em">
+<div style="margin-bottom:6px;display:flex;justify-content:flex-end">
+    <input type="text" @bind="_search" @bind:event="oninput"
+           placeholder="🔍 搜尋..."
+           style="background:rgba(255,255,255,.07);border:1px solid #2a4a6c;
+                  color:#c8d8e8;border-radius:4px;padding:4px 10px;
+                  font-size:0.85em;outline:none;width:160px" />
+</div>
+<RadzenDataGrid Data="@FilteredVersions" TItem="LayoutVersion" Style="font-size:0.85em; height: calc(100vh - 360px)"
+                AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                AllowPaging="true" PageSize="@_pageSize"
+                PageSizeOptions="@(new int[]{10,20,50,100})"
+                Page="@((args) => _page = args.PageIndex)"
+                PageSizeChanged="@((size) => { _pageSize = size; _page = 0; })"
+                ShowPagingSummary="true" PagingSummaryFormat="@PageSummary"
+                class="kanban-light-grid">
     <Columns>
         <RadzenDataGridColumn TItem="LayoutVersion" Property="VersionNo" Title="版本" Width="60px" />
         <RadzenDataGridColumn TItem="LayoutVersion" Property="Status" Title="狀態" Width="80px">
@@ -34,7 +48,26 @@
     [Parameter] public EventCallback OnRolledBack { get; set; }
 
     private List<LayoutVersion> Versions = new();
-    private bool CanPublish;
+    private bool   CanPublish;
+    private string _search   = "";
+    private int    _page     = 0;
+    private int    _pageSize = 10;
+
+    private string PageSummary
+    {
+        get
+        {
+            var total = FilteredVersions.Count();
+            var pages = total == 0 ? 1 : (int)Math.Ceiling((double)total / _pageSize);
+            return $"Page {_page + 1} of {pages} ({total} Items)";
+        }
+    }
+
+    private IEnumerable<LayoutVersion> FilteredVersions => string.IsNullOrWhiteSpace(_search)
+        ? Versions
+        : Versions.Where(v =>
+            (v.CreatedBy?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true) ||
+            v.Status.ToString().Contains(_search, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
