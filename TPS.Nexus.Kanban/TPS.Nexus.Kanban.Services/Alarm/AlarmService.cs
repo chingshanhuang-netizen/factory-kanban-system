@@ -207,7 +207,7 @@ public class AlarmService : IAlarmService
             await conn.ExecuteAsync(
                 """
                 INSERT INTO kanban_alarm_rules
-                  (EquipmentId, DataSourceConfigId, FieldName, Condition, Threshold, AlarmLevel, Message, IsEnabled)
+                  (EquipmentId, DataSourceConfigId, FieldName, `Condition`, Threshold, AlarmLevel, Message, IsEnabled)
                 VALUES
                   (@EquipmentId, @DataSourceConfigId, @FieldName, @Condition, @Threshold, @AlarmLevel, @Message, @IsEnabled)
                 """, rule);
@@ -215,7 +215,7 @@ public class AlarmService : IAlarmService
             await conn.ExecuteAsync(
                 """
                 UPDATE kanban_alarm_rules
-                SET FieldName=@FieldName, Condition=@Condition, Threshold=@Threshold,
+                SET FieldName=@FieldName, `Condition`=@Condition, Threshold=@Threshold,
                     AlarmLevel=@AlarmLevel, Message=@Message, IsEnabled=@IsEnabled
                 WHERE Id=@Id
                 """, rule);
