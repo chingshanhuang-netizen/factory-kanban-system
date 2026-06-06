@@ -8,6 +8,7 @@ using TPS.Nexus.Kanban.Services.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseStaticWebAssets();
+builder.WebHost.UseUrls("http://0.0.0.0:5000");
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
