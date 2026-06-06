@@ -762,11 +762,19 @@
 
     private async Task DeleteEquipment(int id)
     {
+        var eq = AllEquipment.FirstOrDefault(e => e.Id == id);
+        var confirmed = await DialogSvc.Confirm(
+            $"確定要刪除設備「{eq?.Name ?? id.ToString()}」嗎？此操作無法復原。",
+            "刪除設備",
+            new ConfirmOptions { OkButtonText = "刪除", CancelButtonText = "取消",
+});
+        if (confirmed != true) return;
         try
         {
             await EquipmentSvc.DeleteEquipmentAsync(id);
             AllEquipment.RemoveAll(e => e.Id == id);
             await (_equipGrid?.Reload() ?? Task.CompletedTask);
+            NotifySvc.Notify(NotificationSeverity.Success, "設備已刪除", eq?.Name ?? string.Empty);
         }
         catch (Exception ex)
         {
@@ -796,11 +804,19 @@
 
     private async Task DeleteDataSource(int id)
     {
+        var ds = AllDataSources.FirstOrDefault(d => d.Id == id);
+        var confirmed = await DialogSvc.Confirm(
+            $"確定要刪除資料來源「{ds?.Name ?? id.ToString()}」嗎？此操作無法復原。",
+            "刪除資料來源",
+            new ConfirmOptions { OkButtonText = "刪除", CancelButtonText = "取消",
+});
+        if (confirmed != true) return;
         try
         {
             await EquipmentSvc.DeleteDataSourceConfigAsync(id);
             AllDataSources.RemoveAll(d => d.Id == id);
             await (_dsGrid?.Reload() ?? Task.CompletedTask);
+            NotifySvc.Notify(NotificationSeverity.Success, "資料來源已刪除", ds?.Name ?? string.Empty);
         }
         catch (Exception ex)
         {
@@ -894,10 +910,18 @@
 
     private async Task DeleteMap(int id)
     {
+        var map = AllMaps.FirstOrDefault(m => m.Id == id);
+        var confirmed = await DialogSvc.Confirm(
+            $"確定要刪除地圖「{map?.Name ?? id.ToString()}」嗎？\n相關的版面版本與 Widget 設定將一併刪除，此操作無法復原。",
+            "刪除地圖",
+            new ConfirmOptions { OkButtonText = "刪除", CancelButtonText = "取消",
+});
+        if (confirmed != true) return;
         try
         {
             await MapImportSvc.DeleteAsync(id);
             AllMaps.RemoveAll(m => m.Id == id);
+            NotifySvc.Notify(NotificationSeverity.Success, "地圖已刪除", map?.Name ?? string.Empty);
         }
         catch (Exception ex)
         {
