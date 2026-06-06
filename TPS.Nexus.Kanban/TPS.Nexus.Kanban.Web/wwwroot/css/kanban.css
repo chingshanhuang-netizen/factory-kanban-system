@@ -136,3 +136,10 @@
 .kanban-edit-mode .kanban-widget:active {
     cursor: grabbing;
 }
+
+/* ── Multi-select state ── */
+.kanban-widget--selected {
+    border-color: #4fc3f7 !important;
+    border-style: solid !important;
+    box-shadow: 0 0 0 2px rgba(79,195,247,.35), 0 0 10px rgba(79,195,247,.25) !important;
+}

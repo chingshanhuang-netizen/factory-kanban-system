@@ -411,6 +411,29 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    [JSInvokable]
+    public async Task OnEquipmentsBatchMoved(List<EquipmentMoveItem> moves)
+    {
+        foreach (var m in moves)
+        {
+            if (!int.TryParse(m.Id, out var eid)) continue;
+            var widget = Widgets.FirstOrDefault(w => w.EquipmentId == eid);
+            if (widget == null) continue;
+            widget.PositionX = m.X;
+            widget.PositionY = m.Y;
+            try { await EquipmentSvc.SaveWidgetAsync(widget); }
+            catch (Exception ex) { _ = ex; }
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public class EquipmentMoveItem
+    {
+        public string Id { get; set; } = "";
+        public int X { get; set; }
+        public int Y { get; set; }
+    }
+
     private async Task HandleWidgetClick(EquipmentWidget widget)
     {
         // In edit mode clicks are for drag placement only — never open the detail drawer.
