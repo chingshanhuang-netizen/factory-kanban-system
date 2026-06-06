@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>TPS.Nexus 工廠看板系統 — 作業時序圖</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d1b2a;
+      color: #e0f0ff;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+    header {
+      background: #071320;
+      border-bottom: 1px solid #1a3a5c;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header h1 { font-size: 1em; color: #4fc3f7; }
+    header .badge {
+      background: #1a3a5c;
+      color: #88b8d8;
+      font-size: 0.72em;
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid #2a5a8c;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 24px;
+      background: #0a1622;
+      border-bottom: 1px solid #1a3a5c;
+      flex-wrap: wrap;
+    }
+    .toolbar label { color: #88b8d8; font-size: 0.82em; }
+    .toolbar select, .toolbar button {
+      background: #1a3a5c;
+      color: #e0f0ff;
+      border: 1px solid #2a5a8c;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 0.82em;
+      cursor: pointer;
+    }
+    .toolbar button:hover { background: #2a5a8c; }
+    .toolbar button.active { background: rgba(79,195,247,.2); border-color: #4fc3f7; color: #4fc3f7; }
+    #status {
+      padding: 6px 24px;
+      font-size: 0.78em;
+      color: #4fc3f7;
+      background: #071320;
+      border-bottom: 1px solid #1a3a5c;
+      min-height: 28px;
+    }
+    #container {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      overflow: auto;
+    }
+    #diagram-wrapper {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.5);
+      max-width: 100%;
+      overflow: auto;
+    }
+    #diagram-img {
+      display: block;
+      max-width: 100%;
+    }
+    #loading {
+      text-align: center;
+      padding: 60px 24px;
+      color: #4fc3f7;
+    }
+    .spinner {
+      display: inline-block;
+      width: 32px; height: 32px;
+      border: 3px solid #1a3a5c;
+      border-top-color: #4fc3f7;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error { color: #f44336; padding: 24px; text-align: center; }
+    .error a { color: #4fc3f7; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚙ TPS.Nexus 工廠看板系統</h1>
+  <span class="badge">作業時序圖 v1.3</span>
+</header>
+
+<div class="toolbar">
+  <label>格式：</label>
+  <select id="fmt">
+    <option value="svg">SVG（向量，可縮放）</option>
+    <option value="png">PNG（點陣圖）</option>
+  </select>
+  <button onclick="render()">🔄 重新渲染</button>
+  <button onclick="openInNewTab()">↗ 在新分頁開啟</button>
+  <button onclick="toggleSource()" id="srcBtn">📄 查看原始碼</button>
+</div>
+
+<div id="status">⏳ 正在連接 PlantUML 伺服器...</div>
+
+<div id="container">
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>正在渲染時序圖...</div>
+  </div>
+  <div id="diagram-wrapper" style="display:none">
+    <img id="diagram-img" alt="TPS.Nexus 工廠看板系統作業時序圖" />
+  </div>
+  <pre id="source-block" style="display:none;background:#071320;color:#aac8e0;
+       padding:20px;border-radius:8px;border:1px solid #1a3a5c;
+       font-size:0.8em;line-height:1.6;overflow:auto;max-width:900px;white-space:pre-wrap"></pre>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"
+        integrity="sha512-g2TeAWGtPoK8y9GkgsZQZiGF6HBMCLQ4mrJVOqFBb5qvlIMD4iJGh5GexGw0LKEcLCOvXJ5Y5/WFZOQX65CQ=="
+        crossorigin="anonymous"></script>
+
+<script>
+// ── PlantUML 自訂 Base64 編碼 ──────────────────────────────────
+const B64_TABLE = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_';
+
+function encode64(uint8arr) {
+  let result = '';
+  for (let i = 0; i < uint8arr.length; i += 3) {
+    const b1 = uint8arr[i];
+    const b2 = i + 1 < uint8arr.length ? uint8arr[i + 1] : 0;
+    const b3 = i + 2 < uint8arr.length ? uint8arr[i + 2] : 0;
+    result += B64_TABLE[(b1 >> 2) & 0x3F];
+    result += B64_TABLE[((b1 & 0x03) << 4) | ((b2 >> 4) & 0x0F)];
+    result += B64_TABLE[((b2 & 0x0F) << 2) | ((b3 >> 6) & 0x03)];
+    result += B64_TABLE[b3 & 0x3F];
+  }
+  return result;
+}
+
+function encodePlantUML(text) {
+  const utf8  = new TextEncoder().encode(text);
+  const deflated = pako.deflateRaw(utf8, { level: 9 });
+  return encode64(deflated);
+}
+
+function buildUrl(encoded, fmt) {
+  return `https://www.plantuml.com/plantuml/${fmt}/${encoded}`;
+}
+
+// ── PlantUML 原始碼 ────────────────────────────────────────────
+const UML = `@startuml TPS.Nexus 工廠看板系統 — 作業時序圖
+!theme plain
+skinparam backgroundColor #ffffff
+skinparam sequenceArrowColor #1565c0
+skinparam sequenceParticipantBackgroundColor #e3f2fd
+skinparam sequenceParticipantBorderColor #1565c0
+skinparam sequenceParticipantFontColor #0d47a1
+skinparam sequenceGroupBackgroundColor #f5f5f5
+skinparam sequenceGroupBorderColor #1565c0
+skinparam sequenceGroupFontColor #1565c0
+skinparam sequenceNoteBackgroundColor #fff9c4
+skinparam sequenceNoteBorderColor #f9a825
+skinparam sequenceNoteFontColor #5d4037
+skinparam sequenceLifeLineBorderColor #1565c0
+skinparam sequenceArrowFontColor #1565c0
+skinparam defaultFontSize 11
+
+title TPS.Nexus 工廠看板系統 — 作業時序圖\\n(v1.3 · 2026-06-07)
+
+actor       "使用者"              as User
+participant "Browser\\n(Blazor)"   as Browser
+participant "KanbanMapPage"        as Page
+participant "FactoryMapCanvas"     as Canvas
+participant "MapEditorToolbar"     as Toolbar
+participant "LayoutVersionPanel"   as VerPanel
+participant "UserPrefsService"     as Prefs
+participant "ILayoutService"       as LayoutSvc
+participant "IEquipmentService"    as EquipSvc
+participant "IAlarmService"        as AlarmSvc
+participant "IMapImportService"    as MapSvc
+participant "NavigationManager"    as Nav
+participant "KanbanAlarmHub\\n(SignalR)" as Hub
+participant "DialogService"        as Dialog
+
+== 1. 頁面初始化 ==
+
+User    ->  Browser  : 導覽至 /kanban/{mapId}
+Browser ->  Page     : OnInitializedAsync()
+Page    ->  Page     : PermSvc.HasPermission(KANBAN_VIEW)
+Page    ->  Prefs    : EnsureLoadedAsync(JS)
+note right of Prefs  : 從 localStorage 讀取\\nSelectedMapId
+
+alt SelectedMapId ≠ 路由 mapId
+  Page  ->  Nav      : NavigateTo(/kanban/{selectedId},\\nreplace:true)
+  Nav   --> Browser  : 重新導覽（early return）
+end
+
+Page    ->  MapSvc   : GetAllAsync()
+MapSvc  --> Page     : AllMaps
+Page    ->  LayoutSvc: GetPublishedVersionAsync(MapId)
+LayoutSvc --> Page   : PublishedVersion
+Page    ->  AlarmSvc : GetActiveAlarmsAsync()
+AlarmSvc --> Page    : ActiveAlarms
+Page    ->  Prefs    : SetSelectedMapId + SaveAsync(JS)
+Page    ->  Page     : StartCarousel()
+note right            : 建立 CancellationTokenSource\\n篩選 CarouselEnabled 地圖\\n啟動 CarouselTickAsync
+Page    ->  Hub      : HubConnectionBuilder\\n.Build().StartAsync()
+Hub     --> Page     : 連線成功
+Page    --> Browser  : 初始 render
+
+== 2. 地圖輪播 ==
+
+loop 每秒 tick（PeriodicTimer）
+  Page  ->  Page     : _carouselRemainingSeconds--
+  Page  ->  Browser  : InvokeAsync(StateHasChanged)
+  note right          : 輪播徽章倒數更新\\n（wrapper 內 position:absolute\\n全螢幕模式仍可見）
+end
+
+Page    ->  Nav      : NavigateTo("/kanban/{nextMapId}")
+note right of Nav     : 同一 component 複用\\n不觸發 OnInitializedAsync
+Nav     ->  Page     : OnParametersSetAsync()
+Page    ->  Page     : 重置：IsEditMode=false\\nShowVersions=false\\n_carouselPaused=false
+Page    ->  MapSvc   : GetAllAsync()
+MapSvc  --> Page     : AllMaps
+Page    ->  LayoutSvc: GetPublishedVersionAsync(MapId)
+LayoutSvc --> Page   : PublishedVersion (new map)
+Page    ->  Page     : StartCarousel()
+
+== 3. 編輯模式與版本發布 ==
+
+User    ->  Toolbar  : 點擊「編輯」
+Toolbar ->  Page     : IsEditModeChanged(true)
+Page    ->  LayoutSvc: GetVersionHistoryAsync(MapId)
+LayoutSvc --> Page   : versions
+
+alt 存在未發布草稿
+  Page  ->  Dialog   : Confirm("是否繼續草稿？")
+  Dialog --> User    : 彈出確認對話框
+  User  ->  Dialog   : 繼續 / 重新開始 / 取消
+  alt 取消
+    Dialog --> Page  : resume = null
+    Page   ->  Page  : IsEditMode = false
+  else 繼續或重新開始
+    Dialog --> Page  : resume = true/false
+  end
+end
+
+Page    ->  Page     : IsEditMode=true, StopCarousel()
+Page    ->  Canvas   : re-render（編輯模式）
+Canvas  ->  Browser  : JS: kanbanDrag.init("map-canvas")
+note right            : SortableJS 啟用\\nwidget 可拖曳（dashed border）
+
+User    ->  Canvas   : 拖拉設備至新位置
+Canvas  ->  Browser  : JS Interop callback
+Browser ->  Canvas   : [JSInvokable] OnEquipmentMoved(id,x,y)
+Canvas  ->  EquipSvc : SaveWidgetAsync(widget)
+EquipSvc --> Canvas  : widget (updated)
+
+User    ->  Toolbar  : 點擊「存草稿」
+Toolbar ->  Page     : OnSaveDraft
+Page    ->  LayoutSvc: SaveDraftAsync(MapId, layoutJson, user)
+LayoutSvc --> Page   : DraftId
+
+User    ->  Toolbar  : 點擊「發布」
+Toolbar ->  Page     : OnPublish
+Page    ->  LayoutSvc: PublishAsync(DraftId)
+LayoutSvc -> LayoutSvc: Archive 舊 Published\\nDraft → Published
+LayoutSvc --> Page   : PublishedVersion (new)
+Page    ->  Page     : IsEditMode=false\\nStartCarousel()
+
+== 4. 版本面板（疊加覆蓋） ==
+
+User    ->  Toolbar  : 點擊「版本」
+Toolbar ->  Page     : OnShowVersions
+Page    ->  Page     : ShowVersions=true\\nStopCarousel()\\n_carouselPaused=true
+note right            : position:absolute z-index:300\\n疊加地圖，寬 320px\\n不縮小地圖區域
+Page    ->  VerPanel : render
+VerPanel -> LayoutSvc: GetVersionHistoryAsync(MapId)
+LayoutSvc --> VerPanel: versions（降冪）
+VerPanel --> Browser : 深色抽屜列表（非 DataGrid）
+
+opt 回溯操作
+  User    ->  VerPanel : 點擊「回溯」
+  VerPanel -> LayoutSvc: RollbackAsync(versionId)
+  LayoutSvc -> LayoutSvc: Archive Published\\ntarget → Published
+  VerPanel -> Page    : OnRolledBack
+  Page    ->  Browser : StateHasChanged
+end
+
+User    ->  Toolbar  : 再次點擊「版本」（關閉）
+Page    ->  Page     : ShowVersions=false\\nStartCarousel(remaining)
+
+== 5. 設備詳情抽屜 ==
+
+User    ->  Canvas   : 點擊設備 Widget
+Canvas  ->  EquipSvc : GetLinkConfigsAsync(equipmentId)
+EquipSvc --> Canvas  : LinkConfigs
+Canvas  ->  Canvas   : DrawerOpen = true
+note right            : EquipmentDetailDrawer 展開\\nRadzenTabs：當前數值/工單/警報/文件
+Canvas  --> Browser  : render drawer
+
+== 6. 即時警報（SignalR） ==
+
+note over Hub         : 後台警報條件評估
+Hub     ->  Hub      : AlarmService.EvaluateAsync()
+Hub     ->  Hub      : INSERT kanban_alarm_records
+Hub     ->  Hub      : IHubContext.SendAsync\\n("ReceiveAlarm", id, level, msg)
+Hub     -->  Browser : WebSocket push
+Browser ->   Page    : HubConn.On callback
+Page    ->   AlarmSvc: GetActiveAlarmsAsync()
+AlarmSvc --> Page    : ActiveAlarms (updated)
+Page    ->   Browser : StateHasChanged
+Browser ->   Browser : AlarmToast: RadzenNotification\\nduration:5000ms
+
+== 7. 設定管理 ==
+
+User    ->  Browser  : 導覽至 /kanban/settings
+Browser ->  Browser  : MainLayout.IsKanbanActive=true\\nNav link 保持白色
+Browser ->  Page     : KanbanSettingsPage.OnInitializedAsync()
+Page    ->  EquipSvc : GetAllEquipmentAsync()
+EquipSvc --> Page    : AllEquipment
+Page    ->  MapSvc   : GetAllAsync()
+MapSvc  --> Page     : AllMaps（含 Version 欄位）
+Page    --> Browser  : render（4 頁籤）
+
+opt 新增/編輯設備
+  User  ->  Browser  : 操作設定管理 DataGrid
+  Page  ->  EquipSvc : Create/UpdateEquipmentAsync
+  EquipSvc --> Page  : updated
+end
+
+opt 匯入新地圖
+  User  ->  Browser  : 上傳地圖檔案
+  Page  ->  MapSvc   : ImportAsync(stream, fileName, format)
+  MapSvc --> Page    : FactoryMap (new)
+  Page  ->  Browser  : re-render 地圖列表
+end
+
+@enduml`;
+
+// ── 渲染邏輯 ──────────────────────────────────────────────────
+let currentUrl = '';
+let sourceVisible = false;
+
+function setStatus(msg, isError) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.style.color = isError ? '#f44336' : '#4fc3f7';
+}
+
+function render() {
+  const fmt = document.getElementById('fmt').value;
+  document.getElementById('diagram-wrapper').style.display = 'none';
+  document.getElementById('source-block').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  setStatus('⏳ 正在編碼並連接 PlantUML 伺服器...');
+
+  let encoded;
+  try {
+    encoded = encodePlantUML(UML);
+  } catch (e) {
+    document.getElementById('loading').style.display = 'none';
+    setStatus('❌ 編碼失敗：' + e.message, true);
+    return;
+  }
+
+  currentUrl = buildUrl(encoded, fmt);
+  const img = document.getElementById('diagram-img');
+
+  img.onload = function () {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('diagram-wrapper').style.display = 'block';
+    setStatus('✅ 渲染完成｜格式：' + fmt.toUpperCase() + '｜伺服器：www.plantuml.com');
+  };
+  img.onerror = function () {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('diagram-wrapper').innerHTML =
+      `<div class="error">❌ 無法從 PlantUML 伺服器載入圖片<br>
+       請確認網路連線，或
+       <a href="${currentUrl}" target="_blank">點此直接開啟圖片連結</a><br><br>
+       <small style="color:#888">URL: ${currentUrl}</small></div>`;
+    document.getElementById('diagram-wrapper').style.display = 'block';
+    setStatus('❌ 載入失敗，請確認網路連線', true);
+  };
+
+  img.src = currentUrl;
+}
+
+function openInNewTab() {
+  if (!currentUrl) { alert('請先點「重新渲染」產生圖片'); return; }
+  window.open(currentUrl, '_blank');
+}
+
+function toggleSource() {
+  sourceVisible = !sourceVisible;
+  const block = document.getElementById('source-block');
+  const btn = document.getElementById('srcBtn');
+  if (sourceVisible) {
+    block.textContent = UML;
+    block.style.display = 'block';
+    document.getElementById('diagram-wrapper').style.display = 'none';
+    btn.classList.add('active');
+  } else {
+    block.style.display = 'none';
+    document.getElementById('diagram-wrapper').style.display = 'block';
+    btn.classList.remove('active');
+  }
+}
+
+// 頁面載入後自動渲染
+window.onload = function () {
+  if (typeof pako === 'undefined') {
+    setStatus('❌ pako.js 未載入，請確認網路連線（CDN）', true);
+    document.getElementById('loading').innerHTML =
+      `<div class="error">❌ 無法載入 pako.js（需要網路連線）<br>
+       請確認能存取 cdnjs.cloudflare.com</div>`;
+    return;
+  }
+  render();
+};
+</script>
+</body>
+</html>
