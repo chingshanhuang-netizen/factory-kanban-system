@@ -13,11 +13,10 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ============================================================
--- 0. 補欄位（若已存在則 IGNORE 錯誤）
+-- 0. 前置條件
 -- ============================================================
-ALTER TABLE kanban_factory_maps
-    ADD COLUMN Floor  VARCHAR(50)  NULL COMMENT '樓層' AFTER ThumbnailPath,
-    ADD COLUMN Area   VARCHAR(100) NULL COMMENT '廠區' AFTER Floor;
+-- 本腳本假設已執行 2026-06-07-kanban-mysql-schema.sql 建立所有資料表。
+-- 若資料表或欄位不存在，請先執行 Schema SQL。
 
 -- ============================================================
 -- 1. 清除舊測試資料（按 FK 逆序）
@@ -77,25 +76,25 @@ VALUES
 -- 4. kanban_equipment  (15 台設備)
 -- ============================================================
 INSERT INTO kanban_equipment
-    (Id, Name, Tag, Description, IconType, IconValue)
+    (Id, Name, Category, MapName, Tag, Description, IconType, IconValue)
 VALUES
     -- 廠區一樓
-    ( 1, 'CNC加工機',   'CNC-01', '5軸加工中心',        0, 'icon-cnc'),
-    ( 2, '組裝機器人',  'ASM-01', '六軸工業機器人',      0, 'icon-robot'),
-    ( 3, '品質檢測站',  'QC-01',  '3D視覺量測系統',      0, 'icon-qc'),
-    ( 4, '雷射切割機',  'LSR-01', 'CO₂雷射切割',         0, 'icon-laser'),
-    ( 5, '沖壓成型機',  'PRS-01', '100T油壓沖床',        0, 'icon-press'),
-    ( 6, '焊接機器人',  'WLD-01', 'MIG/MAG自動焊接',     0, 'icon-weld'),
-    ( 7, '輸送帶系統',  'CVY-01', '主線輸送皮帶',        0, 'icon-conveyor'),
-    ( 8, 'AGV搬運車',   'AGV-01', '自動導引搬運車',      0, 'icon-agv'),
+    ( 1, 'CNC加工機',    '加工設備', '廠區一樓平面圖', 'CNC-01', '5軸加工中心',        0, 'icon-cnc'),
+    ( 2, '組裝機器人',   '組裝設備', '廠區一樓平面圖', 'ASM-01', '六軸工業機器人',      0, 'icon-robot'),
+    ( 3, '品質檢測站',   '檢測設備', '廠區一樓平面圖', 'QC-01',  '3D視覺量測系統',      0, 'icon-qc'),
+    ( 4, '雷射切割機',   '加工設備', '廠區一樓平面圖', 'LSR-01', 'CO₂雷射切割',         0, 'icon-laser'),
+    ( 5, '沖壓成型機',   '加工設備', '廠區一樓平面圖', 'PRS-01', '100T油壓沖床',        0, 'icon-press'),
+    ( 6, '焊接機器人',   '組裝設備', '廠區一樓平面圖', 'WLD-01', 'MIG/MAG自動焊接',     0, 'icon-weld'),
+    ( 7, '輸送帶系統',   '物流設備', '廠區一樓平面圖', 'CVY-01', '主線輸送皮帶',        0, 'icon-conveyor'),
+    ( 8, 'AGV搬運車',    '物流設備', '廠區一樓平面圖', 'AGV-01', '自動導引搬運車',      0, 'icon-agv'),
     -- 廠區二樓
-    ( 9, '噴塗機器人',  'SPR-01', '六軸自動噴漆臂',      0, 'icon-spray'),
-    (10, '烤漆烘烤爐',  'OVN-01', '紅外線烘烤隧道爐',    0, 'icon-oven'),
-    (11, '壓縮空氣站',  'AIR-01', '螺旋式空壓機組',      0, 'icon-air'),
-    (12, '冷卻水塔',    'CLT-01', '循環冷卻水系統',      0, 'icon-cooling'),
-    (13, 'CMM座標量測機','CMM-01', '三次元座標量測儀',   0, 'icon-cmm'),
-    (14, 'X光探傷儀',   'XRY-01', '工業X射線檢測',       0, 'icon-xray'),
-    (15, '廢水處理站',  'WWT-01', '工業廢水過濾系統',    0, 'icon-waste');
+    ( 9, '噴塗機器人',   '表面處理', '廠區二樓平面圖', 'SPR-01', '六軸自動噴漆臂',      0, 'icon-spray'),
+    (10, '烤漆烘烤爐',   '表面處理', '廠區二樓平面圖', 'OVN-01', '紅外線烘烤隧道爐',    0, 'icon-oven'),
+    (11, '壓縮空氣站',   '公用設施', '廠區二樓平面圖', 'AIR-01', '螺旋式空壓機組',      0, 'icon-air'),
+    (12, '冷卻水塔',     '公用設施', '廠區二樓平面圖', 'CLT-01', '循環冷卻水系統',      0, 'icon-cooling'),
+    (13, 'CMM座標量測機','檢測設備', '廠區二樓平面圖', 'CMM-01', '三次元座標量測儀',    0, 'icon-cmm'),
+    (14, 'X光探傷儀',    '檢測設備', '廠區二樓平面圖', 'XRY-01', '工業X射線檢測',       0, 'icon-xray'),
+    (15, '廢水處理站',   '環保設備', '廠區二樓平面圖', 'WWT-01', '工業廢水過濾系統',    0, 'icon-waste');
 -- IconType: 0=CssClass
 
 -- ============================================================
@@ -201,8 +200,8 @@ SELECT Id, FactoryMapId, VersionNo,
        CASE Status WHEN 0 THEN 'Draft' WHEN 1 THEN 'Published' WHEN 2 THEN 'Archived' END AS Status,
        CreatedBy FROM kanban_layout_versions ORDER BY FactoryMapId, VersionNo;
 
-SELECT '=== kanban_equipment (count) ===' AS '';
-SELECT COUNT(*) AS total FROM kanban_equipment;
+SELECT '=== kanban_equipment (by category) ===' AS '';
+SELECT Category, COUNT(*) AS cnt FROM kanban_equipment GROUP BY Category ORDER BY Category;
 
 SELECT '=== kanban_equipment_widgets ===' AS '';
 SELECT w.Id, e.Name AS Equipment, w.LayoutVersionId, w.PositionX, w.PositionY

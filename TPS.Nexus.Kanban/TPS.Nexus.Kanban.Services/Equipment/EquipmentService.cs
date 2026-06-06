@@ -36,8 +36,8 @@ public class EquipmentService : IEquipmentService
         await using var conn = _db.CreateConnection();
         equipment.Id = await conn.ExecuteScalarAsync<int>(
             """
-            INSERT INTO kanban_equipment (Name, Tag, Description, IconType, IconValue)
-            VALUES (@Name, @Tag, @Description, @IconType, @IconValue);
+            INSERT INTO kanban_equipment (Name, Category, MapName, Tag, Description, IconType, IconValue)
+            VALUES (@Name, @Category, @MapName, @Tag, @Description, @IconType, @IconValue);
             SELECT LAST_INSERT_ID();
             """, equipment);
         return equipment;
@@ -54,7 +54,8 @@ public class EquipmentService : IEquipmentService
         await conn.ExecuteAsync(
             """
             UPDATE kanban_equipment
-            SET Name=@Name, Tag=@Tag, Description=@Description, IconType=@IconType, IconValue=@IconValue
+            SET Name=@Name, Category=@Category, MapName=@MapName,
+                Tag=@Tag, Description=@Description, IconType=@IconType, IconValue=@IconValue
             WHERE Id=@Id
             """, equipment);
     }

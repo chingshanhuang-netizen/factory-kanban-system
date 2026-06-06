@@ -78,6 +78,8 @@ CREATE TABLE IF NOT EXISTS kanban_layout_versions (
 CREATE TABLE IF NOT EXISTS kanban_equipment (
     Id              INT             NOT NULL AUTO_INCREMENT,
     Name            VARCHAR(200)    NOT NULL                    COMMENT '設備名稱',
+    Category        VARCHAR(100)    NULL                        COMMENT '設備類別（如加工設備/物流設備）',
+    MapName         VARCHAR(200)    NULL                        COMMENT '所屬地圖名稱（冗餘欄，方便篩選）',
     Tag             VARCHAR(100)    NULL                        COMMENT '設備標籤／編號',
     Description     TEXT            NULL                        COMMENT '描述',
     IconType        TINYINT         NOT NULL DEFAULT 0          COMMENT '0=CssClass 1=CustomImage',
