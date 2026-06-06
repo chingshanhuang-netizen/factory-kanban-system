@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS kanban_equipment (
     Tag             VARCHAR(100)    NULL                        COMMENT '設備標籤／編號',
     Description     TEXT            NULL                        COMMENT '描述',
     IconType        TINYINT         NOT NULL DEFAULT 0          COMMENT '0=CssClass 1=CustomImage',
-    IconValue       VARCHAR(500)    NULL                        COMMENT 'CSS class 名稱或圖示路徑',
+    IconValue       MEDIUMTEXT      NULL                        COMMENT 'CSS class 名稱 或 base64 data URI / 圖示路徑',
 
     PRIMARY KEY (Id),
     KEY idx_name (Name)
