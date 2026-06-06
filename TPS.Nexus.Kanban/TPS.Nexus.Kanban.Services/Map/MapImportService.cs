@@ -50,8 +50,12 @@ public class MapImportService : IMapImportService
         await using var conn = _db.CreateConnection();
         map.Id = await conn.ExecuteScalarAsync<int>(
             """
-            INSERT INTO kanban_factory_maps (Name, FormatType, FilePath, ThumbnailPath, CreatedAt)
-            VALUES (@Name, @FormatType, @FilePath, @ThumbnailPath, @CreatedAt);
+            INSERT INTO kanban_factory_maps
+              (Name, FormatType, FilePath, ThumbnailPath, CreatedAt,
+               Version, CarouselEnabled, CarouselSeconds, CarouselOrder)
+            VALUES
+              (@Name, @FormatType, @FilePath, @ThumbnailPath, @CreatedAt,
+               @Version, @CarouselEnabled, @CarouselSeconds, @CarouselOrder);
             SELECT LAST_INSERT_ID();
             """, map);
 

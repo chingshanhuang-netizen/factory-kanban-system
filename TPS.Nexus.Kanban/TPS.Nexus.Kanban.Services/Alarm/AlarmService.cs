@@ -83,7 +83,10 @@ public class AlarmService : IAlarmService
                 continue;
             }
 
-            var rawVal = ruleData.Fields.Values.FirstOrDefault();
+            // Use FieldName to look up the specific field; fall back to first field for legacy rules.
+            var rawVal = ruleData.Fields.TryGetValue(rule.FieldName, out var named)
+                ? named
+                : ruleData.Fields.Values.FirstOrDefault();
             if (rawVal == null) continue;
 
             // A-5 fix: use InvariantCulture so decimal separator is always '.' regardless of host locale
@@ -166,6 +169,14 @@ public class AlarmService : IAlarmService
     {
         await using var conn = _db.CreateConnection();
         return await conn.QueryAsync<AlarmRule>(
+            "SELECT * FROM kanban_alarm_rules WHERE EquipmentId=@EquipmentId AND IsEnabled=1",
+            new { EquipmentId = equipmentId });
+    }
+
+    public async Task<IEnumerable<AlarmRule>> GetAllRulesAsync(int equipmentId)
+    {
+        await using var conn = _db.CreateConnection();
+        return await conn.QueryAsync<AlarmRule>(
             "SELECT * FROM kanban_alarm_rules WHERE EquipmentId=@EquipmentId",
             new { EquipmentId = equipmentId });
     }
@@ -195,13 +206,19 @@ public class AlarmService : IAlarmService
         if (rule.Id == 0)
             await conn.ExecuteAsync(
                 """
-                INSERT INTO kanban_alarm_rules (EquipmentId, DataSourceConfigId, Condition, Threshold, AlarmLevel)
-                VALUES (@EquipmentId, @DataSourceConfigId, @Condition, @Threshold, @AlarmLevel)
+                INSERT INTO kanban_alarm_rules
+                  (EquipmentId, DataSourceConfigId, FieldName, Condition, Threshold, AlarmLevel, Message, IsEnabled)
+                VALUES
+                  (@EquipmentId, @DataSourceConfigId, @FieldName, @Condition, @Threshold, @AlarmLevel, @Message, @IsEnabled)
                 """, rule);
         else
             await conn.ExecuteAsync(
-                "UPDATE kanban_alarm_rules SET Condition=@Condition, Threshold=@Threshold, AlarmLevel=@AlarmLevel WHERE Id=@Id",
-                rule);
+                """
+                UPDATE kanban_alarm_rules
+                SET FieldName=@FieldName, Condition=@Condition, Threshold=@Threshold,
+                    AlarmLevel=@AlarmLevel, Message=@Message, IsEnabled=@IsEnabled
+                WHERE Id=@Id
+                """, rule);
     }
 
     public async Task DeleteRuleAsync(int ruleId)
