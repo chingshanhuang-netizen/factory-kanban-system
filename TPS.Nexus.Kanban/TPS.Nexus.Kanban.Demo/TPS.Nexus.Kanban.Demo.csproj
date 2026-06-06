@@ -6,9 +6,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Radzen.Blazor" Version="5.*" />
+    <PackageReference Include="MySqlConnector" Version="2.*" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TPS.Nexus.Kanban.Web\TPS.Nexus.Kanban.Web.csproj" />
+    <ProjectReference Include="..\TPS.Nexus.Kanban.Services\TPS.Nexus.Kanban.Services.csproj" />
     <Reference Include="TPS.Nexus.Core">
       <HintPath>..\libs\TPS.Nexus.Core.dll</HintPath>
     </Reference>
