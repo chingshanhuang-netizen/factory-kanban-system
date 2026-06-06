@@ -31,8 +31,10 @@ const string fixSql = """
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='警報規則'
     """;
 
-var sqlFile = Path.GetFullPath(
-    Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
+var sqlArg = args.FirstOrDefault();
+var sqlFile = sqlArg != null
+    ? Path.GetFullPath(sqlArg)
+    : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
         "docs", "superpowers", "specs", "2026-06-07-kanban-mysql-schema.sql"));
 
 if (!File.Exists(sqlFile))

@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS kanban_factory_maps (
     FilePath        VARCHAR(500)    NOT NULL                    COMMENT '儲存路徑或 URL',
     ThumbnailPath   VARCHAR(500)    NULL                        COMMENT '縮圖路徑（可空）',
     CreatedAt       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '建立時間',
+    Floor           VARCHAR(50)     NULL                        COMMENT '樓層（如 1F / 2F）',
+    Area            VARCHAR(100)    NULL                        COMMENT '廠區名稱',
     Version         VARCHAR(50)     NOT NULL DEFAULT 'v1'       COMMENT '人工版本標籤（顯示於設定管理）',
     CarouselEnabled TINYINT(1)      NOT NULL DEFAULT 0          COMMENT '是否加入輪播序列',
     CarouselSeconds INT             NOT NULL DEFAULT 10         COMMENT '輪播停留秒數',
