@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS kanban_alarm_rules (
     EquipmentId         INT             NOT NULL                    COMMENT 'FK → kanban_equipment.Id',
     DataSourceConfigId  INT             NOT NULL                    COMMENT 'FK → kanban_datasource_configs.Id',
     FieldName           VARCHAR(100)    NOT NULL DEFAULT 'value'    COMMENT '監控的欄位名稱',
-    Condition           VARCHAR(10)     NOT NULL                    COMMENT '條件運算子：> < >= <= == !=',
+    `Condition`         VARCHAR(10)     NOT NULL                    COMMENT '條件運算子：> < >= <= == !=',
     Threshold           DOUBLE          NOT NULL                    COMMENT '閾值',
     AlarmLevel          TINYINT         NOT NULL                    COMMENT '0=Info 1=Warning 2=Critical',
     Message             VARCHAR(500)    NULL                        COMMENT '觸發時的警報訊息範本',
