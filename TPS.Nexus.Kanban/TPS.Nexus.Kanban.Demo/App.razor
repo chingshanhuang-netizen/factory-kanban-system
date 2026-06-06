@@ -12,8 +12,73 @@
 </head>
 <body>
     <Routes @rendermode="InteractiveServer" />
-    <script src="_framework/blazor.web.js"></script>
+    <script src="_framework/blazor.web.js" autostart="false"></script>
     <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
     <script src="js/kanban-drag.js"></script>
+    <script>
+    (function () {
+        // Build the custom reconnect overlay in dark theme
+        var overlay = document.createElement('div');
+        overlay.id = 'custom-reconnect-overlay';
+        overlay.style.cssText =
+            'display:none;position:fixed;inset:0;z-index:9999;' +
+            'background:rgba(0,0,0,.72);align-items:center;justify-content:center';
+        overlay.innerHTML =
+            '<style>' +
+            '#custom-reconnect-overlay{font-family:"Segoe UI",Arial,sans-serif;font-size:14px;color:#c8d8e8}' +
+            '.rcn-box{background:#0d1b2a;border:1px solid #1a3a5c;border-radius:12px;' +
+            '         padding:32px 40px;text-align:center;min-width:280px}' +
+            '.rcn-spinner{width:44px;height:44px;border:3px solid #1a3a5c;border-top-color:#4fc3f7;' +
+            '             border-radius:50%;animation:rcn-spin .8s linear infinite;margin:0 auto 18px}' +
+            '.rcn-title{font-size:15px;margin-bottom:6px}' +
+            '.rcn-sub{font-size:12px;color:#5a7a9b;margin-top:4px}' +
+            '.rcn-btn{margin-top:16px;background:#1a4070;color:#4fc3f7;border:1px solid #1a3a5c;' +
+            '         border-radius:6px;padding:7px 22px;cursor:pointer;font-size:13px}' +
+            '.rcn-btn:hover{background:#244f8a}' +
+            '@@keyframes rcn-spin{to{transform:rotate(360deg)}}' +
+            '</style>' +
+            '<div class="rcn-box">' +
+            '  <div id="rcn-spinner" class="rcn-spinner"></div>' +
+            '  <div id="rcn-reconnecting">' +
+            '    <div class="rcn-title">正在重新連線至伺服器...</div>' +
+            '    <div id="rcn-attempt" class="rcn-sub"></div>' +
+            '  </div>' +
+            '  <div id="rcn-failed" style="display:none">' +
+            '    <div class="rcn-title">⚠ 無法重新連線至伺服器</div>' +
+            '    <div class="rcn-sub">連線重試已達上限</div>' +
+            '    <button class="rcn-btn" onclick="location.reload()">重新整理頁面</button>' +
+            '  </div>' +
+            '  <div id="rcn-rejected" style="display:none">' +
+            '    <div class="rcn-title">⚠ 連線已中斷</div>' +
+            '    <div class="rcn-sub">工作階段已過期，請重新整理</div>' +
+            '    <button class="rcn-btn" onclick="location.reload()">重新整理頁面</button>' +
+            '  </div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+
+        function setState(state) {
+            overlay.style.display = state ? 'flex' : 'none';
+            document.getElementById('rcn-spinner').style.display      = state === 'reconnecting' ? 'block' : 'none';
+            document.getElementById('rcn-reconnecting').style.display  = state === 'reconnecting' ? 'block' : 'none';
+            document.getElementById('rcn-failed').style.display        = state === 'failed'       ? 'block' : 'none';
+            document.getElementById('rcn-rejected').style.display      = state === 'rejected'     ? 'block' : 'none';
+        }
+
+        Blazor.start({
+            circuit: {
+                reconnectionDisplay: {
+                    show: function () { setState('reconnecting'); },
+                    update: function (attempt) {
+                        var el = document.getElementById('rcn-attempt');
+                        if (el) el.textContent = '第 ' + attempt + ' 次嘗試重新連線';
+                    },
+                    hide: function () { setState(null); },
+                    failed: function () { setState('failed'); },
+                    rejected: function () { setState('rejected'); }
+                }
+            }
+        });
+    })();
+    </script>
 </body>
 </html>

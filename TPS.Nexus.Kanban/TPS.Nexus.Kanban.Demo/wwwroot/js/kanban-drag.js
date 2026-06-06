@@ -1,3 +1,7 @@
+// Virtual canvas dimensions — all widget positions are stored in this coordinate space.
+var KANBAN_VIRT_W = 1920;
+var KANBAN_VIRT_H = 1080;
+
 window.kanbanDrag = {
     _dragging:   null,
     _container:  null,
@@ -20,11 +24,14 @@ window.kanbanDrag = {
         this._handlers.down = function (evt) {
             var widget = evt.target.closest('[data-equipment-id]');
             if (!widget) return;
+            var scaleX = self._container.offsetWidth  / KANBAN_VIRT_W;
+            var scaleY = self._container.offsetHeight / KANBAN_VIRT_H;
             self._dragging = widget;
             self._moved    = false;
             var r = widget.getBoundingClientRect();
-            self._offsetX = evt.clientX - r.left;
-            self._offsetY = evt.clientY - r.top;
+            // Offset stored in virtual canvas space
+            self._offsetX = (evt.clientX - r.left) / scaleX;
+            self._offsetY = (evt.clientY - r.top)  / scaleY;
             self._startX  = evt.clientX;
             self._startY  = evt.clientY;
             widget.style.cursor     = 'grabbing';
@@ -32,7 +39,7 @@ window.kanbanDrag = {
             widget.style.userSelect = 'none';
         };
 
-        // ── pointermove: move widget visually ─────────────────────────────────
+        // ── pointermove: move widget in virtual space ─────────────────────────
         this._handlers.move = function (evt) {
             if (!self._dragging) return;
             if (Math.abs(evt.clientX - self._startX) > 3 ||
@@ -41,18 +48,21 @@ window.kanbanDrag = {
             }
             if (!self._moved) return;
             evt.preventDefault();
+            var scaleX = self._container.offsetWidth  / KANBAN_VIRT_W;
+            var scaleY = self._container.offsetHeight / KANBAN_VIRT_H;
             var cr = self._container.getBoundingClientRect();
+            // Convert screen coords to virtual canvas coords
             var x  = Math.max(0, Math.min(
-                evt.clientX - cr.left - self._offsetX,
-                cr.width  - self._dragging.offsetWidth));
+                (evt.clientX - cr.left) / scaleX - self._offsetX,
+                KANBAN_VIRT_W - self._dragging.offsetWidth));
             var y  = Math.max(0, Math.min(
-                evt.clientY - cr.top  - self._offsetY,
-                cr.height - self._dragging.offsetHeight));
+                (evt.clientY - cr.top)  / scaleY - self._offsetY,
+                KANBAN_VIRT_H - self._dragging.offsetHeight));
             self._dragging.style.left = x + 'px';
             self._dragging.style.top  = y + 'px';
         };
 
-        // ── pointerup: persist new position ───────────────────────────────────
+        // ── pointerup: persist virtual position ───────────────────────────────
         this._handlers.up = function (evt) {
             if (!self._dragging) return;
             var el = self._dragging;
@@ -60,13 +70,15 @@ window.kanbanDrag = {
             el.style.zIndex     = '';
             el.style.userSelect = '';
             if (self._moved) {
+                var scaleX = self._container.offsetWidth  / KANBAN_VIRT_W;
+                var scaleY = self._container.offsetHeight / KANBAN_VIRT_H;
                 var cr  = self._container.getBoundingClientRect();
                 var x   = Math.round(Math.max(0, Math.min(
-                    evt.clientX - cr.left - self._offsetX,
-                    cr.width  - el.offsetWidth)));
+                    (evt.clientX - cr.left) / scaleX - self._offsetX,
+                    KANBAN_VIRT_W - el.offsetWidth)));
                 var y   = Math.round(Math.max(0, Math.min(
-                    evt.clientY - cr.top  - self._offsetY,
-                    cr.height - el.offsetHeight)));
+                    (evt.clientY - cr.top)  / scaleY - self._offsetY,
+                    KANBAN_VIRT_H - el.offsetHeight)));
                 var eid = el.dataset.equipmentId;
                 // suppress the Blazor @onclick that fires right after pointerup
                 document.addEventListener('click',
@@ -102,5 +114,59 @@ window.kanbanDrag = {
     updatePosition: function (elementId, x, y) {
         var el = document.getElementById(elementId);
         if (el) { el.style.left = x + 'px'; el.style.top = y + 'px'; }
+    }
+};
+
+// ── Canvas utilities: resize observer + fullscreen ────────────────────────────
+window.kanbanCanvas = {
+    _resizeObserver: null,
+    _fsHandler:      null,
+
+    observeResize: function (containerId, dotNetRef) {
+        this.unobserveResize();
+        var container = document.getElementById(containerId);
+        if (!container) return;
+        var obs = new ResizeObserver(function (entries) {
+            for (var entry of entries) {
+                var w = entry.contentRect.width;
+                var h = entry.contentRect.height;
+                if (w > 0 && h > 0)
+                    dotNetRef.invokeMethodAsync('OnCanvasResized', w, h);
+            }
+        });
+        obs.observe(container);
+        this._resizeObserver = obs;
+        // Fire immediately with current size so initial scale is applied
+        var r = container.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0)
+            dotNetRef.invokeMethodAsync('OnCanvasResized', r.width, r.height);
+    },
+
+    unobserveResize: function () {
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+            this._resizeObserver = null;
+        }
+    },
+
+    observeFullscreen: function (dotNetRef) {
+        if (this._fsHandler)
+            document.removeEventListener('fullscreenchange', this._fsHandler);
+        this._fsHandler = function () {
+            dotNetRef.invokeMethodAsync('OnFullscreenChanged', !!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', this._fsHandler);
+    },
+
+    toggleFullscreen: function (wrapperId) {
+        var el = document.getElementById(wrapperId);
+        if (!el) return;
+        if (!document.fullscreenElement) {
+            el.requestFullscreen().catch(function (err) {
+                console.warn('kanbanCanvas: fullscreen request failed:', err);
+            });
+        } else {
+            document.exitFullscreen();
+        }
     }
 };

@@ -2,7 +2,7 @@
 @inject IEquipmentService EquipmentSvc
 @inject IOptions<KanbanModuleOptions> ModuleOpts
 
-<div style="position:fixed;right:0;top:0;width:420px;height:100vh;z-index:50;
+<div style="position:absolute;right:0;top:0;width:320px;height:100%;z-index:50;
             background:#0d1b2a;border-left:1px solid #1a3a5c;overflow-y:auto;
             transform:@(IsOpen ? "translateX(0)" : "translateX(420px)");
             transition:transform 0.25s ease;

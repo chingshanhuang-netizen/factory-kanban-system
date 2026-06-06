@@ -14,74 +14,140 @@
     return;
 }
 
-<div style="display:flex;height:@(CanvasHeight)px">
+@* Wrapper is position:relative so absolute-positioned drawers stack within it —
+   this keeps z-index resolution consistent in both normal and fullscreen modes. *@
+<div id="kanban-fs-wrapper" style="display:flex;height:100%;background:#1a1a2e;position:relative">
 
     <div id="map-canvas"
          class="kanban-map-container @(IsEditMode ? "kanban-edit-mode" : "")"
-         style="flex:1;min-width:0;height:100%;position:relative;">
+         style="flex:1;min-width:0;height:100%;position:relative;overflow:hidden;">
 
-        <MapLayer Map="@CurrentMap" />
+        @* Virtual 1920×1080 canvas — everything inside scales proportionally *@
+        <div class="kanban-virtual-canvas" style="@VirtCanvasStyle">
 
-        <div class="kanban-equipment-layer">
-            @foreach (var widget in Widgets.Where(w => GetEquipment(w.EquipmentId)?.MapName == CurrentMap?.Name))
-            {
-                <EquipmentWidgetPanel
-                    Widget="@widget"
-                    EquipmentData="@GetEquipment(widget.EquipmentId)"
-                    ActiveAlarm="@GetActiveAlarm(widget.EquipmentId)"
-                    IsRunning="@GetIsRunning(widget.EquipmentId)"
-                    OnClick="@((w) => HandleWidgetClick(w))"
-                    OnHover="@((w) => HandleWidgetHover(w))"
-                    OnHoverEnd="@HandleHoverEnd" />
-            }
+            <MapLayer Map="@CurrentMap" />
+
+            <div class="kanban-equipment-layer">
+                @foreach (var widget in Widgets.Where(w => GetEquipment(w.EquipmentId)?.MapName == CurrentMap?.Name))
+                {
+                    <EquipmentWidgetPanel
+                        Widget="@widget"
+                        EquipmentData="@GetEquipment(widget.EquipmentId)"
+                        ActiveAlarm="@GetActiveAlarm(widget.EquipmentId)"
+                        IsRunning="@GetIsRunning(widget.EquipmentId)"
+                        OnClick="@((w) => HandleWidgetClick(w))"
+                        OnHover="@((w) => HandleWidgetHover(w))"
+                        OnHoverEnd="@HandleHoverEnd" />
+                }
+            </div>
+
+            <EquipmentTooltip
+                Widget="@HoveredWidget"
+                EquipmentData="@GetEquipment(HoveredWidget?.EquipmentId ?? 0)"
+                LatestData="@HoveredData" />
+
         </div>
 
-        <EquipmentTooltip
-            Widget="@HoveredWidget"
-            EquipmentData="@GetEquipment(HoveredWidget?.EquipmentId ?? 0)"
-            LatestData="@HoveredData" />
+        @* Fullscreen toggle — top right corner, z-index above drawers *@
+        <button @onclick="ToggleFullscreen"
+                title="@(_isFullscreen ? "退出全螢幕" : "全螢幕")"
+                style="position:absolute;top:8px;right:8px;z-index:100;
+                       background:rgba(0,0,0,.55);color:#ccc;border:1px solid #333;
+                       border-radius:5px;padding:3px 8px;cursor:pointer;font-size:1em;
+                       line-height:1.4;transition:background .15s">
+            @(_isFullscreen ? "⊡" : "⛶")
+        </button>
 
-        <EquipmentDetailDrawer
-            @bind-IsOpen="DrawerOpen"
-            Widget="@SelectedWidget"
-            EquipmentData="@GetEquipment(SelectedWidget?.EquipmentId ?? 0)"
-            LatestData="@SelectedData"
-            HistoryData="@HistoryData"
-            LinkConfigs="@SelectedLinkConfigs"
-            EquipmentAlarms="@(ActiveAlarms.Where(a => a.EquipmentId == (SelectedWidget?.EquipmentId ?? 0)))" />
+        @* Equipment palette toggle — edit mode only, z-index above drawers *@
+        @if (IsEditMode)
+        {
+            <button @onclick="@(() => _equipDrawerOpen = !_equipDrawerOpen)"
+                    title="@(_equipDrawerOpen ? "隱藏設備清單" : "顯示設備清單")"
+                    style="position:absolute;top:8px;right:52px;z-index:100;
+                           background:rgba(13,27,42,.85);color:#4fc3f7;
+                           border:1px solid #1a3a5c;border-radius:5px;
+                           padding:3px 10px;cursor:pointer;font-size:0.82em;
+                           line-height:1.6;transition:background .15s">
+                ⊞ 設備
+            </button>
+        }
+
     </div>
 
-    @if (IsEditMode)
-    {
+    @* ── Detail drawer (current value) ─────────────────────────────────────────
+       position:absolute inside #kanban-fs-wrapper so it stacks correctly in both
+       normal and fullscreen modes without z-index cross-context issues.        *@
+    <EquipmentDetailDrawer
+        @bind-IsOpen="DrawerOpen"
+        Widget="@SelectedWidget"
+        EquipmentData="@GetEquipment(SelectedWidget?.EquipmentId ?? 0)"
+        LatestData="@SelectedData"
+        HistoryData="@HistoryData"
+        LinkConfigs="@SelectedLinkConfigs"
+        EquipmentAlarms="@(ActiveAlarms.Where(a => a.EquipmentId == (SelectedWidget?.EquipmentId ?? 0)))" />
+
+    @* ── Equipment palette drawer (edit mode) ──────────────────────────────────
+       Same width and position strategy as the detail drawer.                   *@
+    @{
         var mapEquip = AllEquipment
             .Where(e => !string.IsNullOrEmpty(e.MapName) && e.MapName == CurrentMap?.Name)
             .ToList();
-        if (mapEquip.Count > 0)
-        {
-            <div style="width:200px;flex-shrink:0;height:100%;
-                        border-left:1px solid #1a3a5c;background:rgba(13,27,42,.97);
-                        overflow-y:auto;padding:10px;box-sizing:border-box">
-                <div style="font-size:0.8em;color:#aaa;margin-bottom:8px;font-weight:500">
-                    地圖設備（@mapEquip.Count）
+    }
+    <div style="position:absolute;right:0;top:0;width:320px;height:100%;z-index:50;
+                background:#0d1b2a;border-left:1px solid #1a3a5c;overflow-y:auto;
+                transform:@(_equipDrawerOpen ? "translateX(0)" : "translateX(320px)");
+                transition:transform 0.25s ease;
+                pointer-events:@(_equipDrawerOpen ? "auto" : "none")">
+
+        @* Header — mirrors EquipmentDetailDrawer header style *@
+        <button @onclick="@(() => _equipDrawerOpen = false)"
+                style="position:absolute;top:8px;right:12px;background:none;border:none;
+                       color:#888;font-size:1.2em;cursor:pointer;line-height:1;padding:2px 6px"
+                title="關閉">✕</button>
+
+        <div style="padding:16px;padding-right:36px;border-bottom:1px solid #1a3a5c">
+            <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:1.4em;line-height:1">🗂️</span>
+                <div>
+                    <div style="color:#fff;font-weight:bold">地圖設備</div>
+                    <div style="color:#888;font-size:0.8em">共 @mapEquip.Count 台 · @(Widgets.Count(w => mapEquip.Any(e => e.Id == w.EquipmentId))) 台已配置</div>
                 </div>
+            </div>
+        </div>
+
+        @* Equipment list — same card structure as detail drawer's data section *@
+        @if (mapEquip.Count == 0)
+        {
+            <div style="color:#555;font-size:0.82em;padding:20px 16px">此地圖尚無設備</div>
+        }
+        else
+        {
+            <div style="padding:8px 0">
                 @foreach (var eq in mapEquip)
                 {
                     var placed = Widgets.Any(w => w.EquipmentId == eq.Id);
-                    <div style="display:flex;align-items:center;gap:6px;padding:5px 0;
-                                border-bottom:1px solid rgba(255,255,255,.06)">
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;
+                                border-bottom:1px solid rgba(255,255,255,.05);
+                                background:@(placed ? "rgba(76,175,80,.06)" : "transparent")">
                         <div style="flex-shrink:0">
                             <EquipmentIconRenderer Equipment="@eq" />
                         </div>
-                        <span style="font-size:0.8em;flex:1;overflow:hidden;
-                                     text-overflow:ellipsis;white-space:nowrap;
-                                     color:#ddd">@eq.Name</span>
+                        <div style="flex:1;overflow:hidden">
+                            <div style="color:#ddd;font-size:0.83em;white-space:nowrap;
+                                        overflow:hidden;text-overflow:ellipsis">@eq.Name</div>
+                            @if (!string.IsNullOrEmpty(eq.Tag))
+                            {
+                                <div style="color:#666;font-size:0.72em">@eq.Tag</div>
+                            }
+                        </div>
                         @if (placed)
                         {
-                            <span style="font-size:0.75em;color:#4caf50;flex-shrink:0">✓</span>
+                            <span style="font-size:0.75em;color:#4caf50;flex-shrink:0;
+                                         font-weight:600">✓ 已放置</span>
                         }
                         else
                         {
-                            <RadzenButton Text="+" Size="ButtonSize.ExtraSmall"
+                            <RadzenButton Text="＋" Size="ButtonSize.ExtraSmall"
                                           ButtonStyle="ButtonStyle.Secondary"
                                           Click="@(() => AddEquipmentToCanvas(eq))" />
                         }
@@ -89,16 +155,27 @@
                 }
             </div>
         }
-    }
+    </div>
 
 </div>
 
 @code {
     [Parameter, EditorRequired] public int MapId { get; set; }
     [Parameter] public bool IsEditMode { get; set; }
-    [Parameter] public int CanvasHeight { get; set; } = 600;
     [Parameter] public int? ResumeDraftId { get; set; }
     [Parameter] public EventCallback<int?> OnWorkingVersionChanged { get; set; }
+
+    private const int VirtW = 1920;
+    private const int VirtH = 1080;
+    private double _scaleX = 1.0;
+    private double _scaleY = 1.0;
+    private bool _isFullscreen;
+    private bool _equipDrawerOpen;
+
+    private string VirtCanvasStyle =>
+        $"transform:scale(" +
+        $"{_scaleX.ToString("F6", System.Globalization.CultureInfo.InvariantCulture)}," +
+        $"{_scaleY.ToString("F6", System.Globalization.CultureInfo.InvariantCulture)})";
 
     private FactoryMap? CurrentMap;
     private List<EquipmentWidget> Widgets = new();
@@ -126,8 +203,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // V-1: markup @if guard does not prevent lifecycle methods from running;
-        // guard here so service calls are skipped when MapId is not yet resolved.
         if (MapId <= 0) return;
         DotNetRef = DotNetObjectReference.Create(this);
         _prevMapId = MapId;
@@ -147,10 +222,6 @@
 
     private async Task LoadMapDataAsync()
     {
-        // Capture mapId and a version token at the start. If a newer load starts while
-        // this one is awaiting (Blazor Server yields between awaits even for synchronous
-        // tasks), the stale load detects the mismatch and discards its results rather than
-        // overwriting state that a newer load already set correctly.
         var mapId = MapId;
         var token = ++_loadVersion;
 
@@ -183,7 +254,6 @@
         var alarms = await AlarmSvc.GetActiveAlarmsAsync();
         if (_loadVersion != token) return;
 
-        // All data fetched — update state atomically so no intermediate partial-state render.
         CurrentMap          = newCurrentMap;
         _publishedVersionId = newPublishedId;
         Widgets             = newWidgets;
@@ -193,6 +263,16 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("kanbanCanvas.observeResize", "map-canvas", DotNetRef);
+                await JS.InvokeVoidAsync("kanbanCanvas.observeFullscreen", DotNetRef);
+            }
+            catch (JSException) { }
+        }
+
         if (IsEditMode && !_prevIsEditMode)
         {
             await BeginEditSessionAsync();
@@ -215,20 +295,43 @@
         _prevIsEditMode = IsEditMode;
     }
 
+    [JSInvokable]
+    public Task OnCanvasResized(double w, double h)
+    {
+        if (w <= 0 || h <= 0) return Task.CompletedTask;
+        _scaleX = w / VirtW;
+        _scaleY = h / VirtH;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public Task OnFullscreenChanged(bool isFs)
+    {
+        _isFullscreen = isFs;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleFullscreen()
+    {
+        try { await JS.InvokeVoidAsync("kanbanCanvas.toggleFullscreen", "kanban-fs-wrapper"); }
+        catch (JSException) { }
+    }
+
     private async Task BeginEditSessionAsync()
     {
         if (MapId <= 0) return;
+        DrawerOpen       = false;   // detail drawer and equipment drawer don't coexist
+        SelectedWidget   = null;
+        _equipDrawerOpen = true;
         try
         {
             if (ResumeDraftId.HasValue)
             {
-                // Continue from the saved draft chosen by the user.
                 _editVersionId = ResumeDraftId.Value;
                 Widgets = (await EquipmentSvc.GetWidgetsByVersionAsync(ResumeDraftId.Value)).ToList();
             }
             else
             {
-                // Start a fresh draft copied from the published version.
                 var draft = await LayoutSvc.SaveDraftAsync(MapId, "{}", "系統");
                 _editVersionId = draft.Id;
 
@@ -259,7 +362,8 @@
 
     private async Task EndEditSessionAsync()
     {
-        _editVersionId = null;
+        _editVersionId   = null;
+        _equipDrawerOpen = false;
         await OnWorkingVersionChanged.InvokeAsync(null);
 
         var published = await LayoutSvc.GetPublishedVersionAsync(MapId);
@@ -283,8 +387,6 @@
         {
             while (await _pollTimer.WaitForNextTickAsync(ct))
             {
-                // W-16: a DB exception here escapes the fire-and-forget task and becomes an
-                // UnobservedTaskException — swallow so the poll loop survives transient DB errors.
                 try
                 {
                     ActiveAlarms = (await AlarmSvc.GetActiveAlarmsAsync()).ToList();
@@ -304,22 +406,16 @@
         if (widget == null) return;
         widget.PositionX = x;
         widget.PositionY = y;
-        // W-12: an unhandled exception in a [JSInvokable] method disconnects the Blazor
-        // circuit; catch and swallow so the drag operation fails silently rather than
-        // killing the entire page session.
-        try
-        {
-            await EquipmentSvc.SaveWidgetAsync(widget);
-        }
-        catch (Exception ex)
-        {
-            _ = ex; // position update is best-effort; will be re-persisted on next action
-        }
+        try { await EquipmentSvc.SaveWidgetAsync(widget); }
+        catch (Exception ex) { _ = ex; }
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleWidgetClick(EquipmentWidget widget)
     {
+        // In edit mode clicks are for drag placement only — never open the detail drawer.
+        if (IsEditMode) return;
+
         if (DrawerOpen && SelectedWidget?.EquipmentId == widget.EquipmentId)
         {
             DrawerOpen = false;
@@ -351,8 +447,6 @@
 
     private async Task AddEquipmentToCanvas(Equipment eq)
     {
-        // In edit mode use the draft version; fall back to auto-creating a published version
-        // only when there is genuinely no published version yet (brand-new map).
         var versionId = _editVersionId;
         if (versionId == null)
         {
@@ -410,6 +504,7 @@
         _cts.Cancel();
         _cts.Dispose();
         _pollTimer?.Dispose();
+        try { await JS.InvokeVoidAsync("kanbanCanvas.unobserveResize"); } catch { }
         DotNetRef?.Dispose();
         if (IsEditMode)
         {

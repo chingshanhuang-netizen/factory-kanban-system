@@ -36,8 +36,8 @@
     OnPublish="@HandlePublish"
     OnShowVersions="@(() => ShowVersions = !ShowVersions)" />
 
-<div style="display:flex;height:calc(100vh - 54px)">
-    <div style="flex:1;min-width:0">
+<div style="display:flex;height:calc(100vh - 102px)">
+    <div style="flex:1;min-width:0;height:100%">
         <FactoryMapCanvas MapId="@MapId" IsEditMode="@IsEditMode"
                           ResumeDraftId="@_resumeDraftId"
                           OnWorkingVersionChanged="@((id) => DraftId = id)" />
