@@ -1,0 +1,236 @@
+@startuml TPS.Nexus 工廠看板系統 — 作業時序圖
+!theme plain
+skinparam backgroundColor #0d1b2a
+skinparam sequenceArrowColor #4fc3f7
+skinparam sequenceParticipantBackgroundColor #1a3a5c
+skinparam sequenceParticipantBorderColor #2a5a8c
+skinparam sequenceParticipantFontColor #e0f0ff
+skinparam sequenceGroupBackgroundColor #0d2137
+skinparam sequenceGroupBorderColor #2a5a8c
+skinparam sequenceGroupFontColor #4fc3f7
+skinparam sequenceNoteBackgroundColor #1a2a3a
+skinparam sequenceNoteBorderColor #2a5a8c
+skinparam sequenceNoteFontColor #aac8e0
+skinparam sequenceLifeLineBorderColor #2a5a8c
+skinparam sequenceArrowFontColor #88b8d8
+
+title TPS.Nexus 工廠看板系統 — 作業時序圖\n(v1.3 · 2026-06-07)
+
+actor       "使用者"              as User
+participant "Browser\n(Blazor)"   as Browser
+participant "KanbanMapPage"        as Page
+participant "FactoryMapCanvas"     as Canvas
+participant "MapEditorToolbar"     as Toolbar
+participant "LayoutVersionPanel"   as VerPanel
+participant "UserPrefsService"     as Prefs
+participant "ILayoutService"       as LayoutSvc
+participant "IEquipmentService"    as EquipSvc
+participant "IAlarmService"        as AlarmSvc
+participant "IMapImportService"    as MapSvc
+participant "NavigationManager"    as Nav
+participant "KanbanAlarmHub\n(SignalR)" as Hub
+participant "DialogService"        as Dialog
+
+'──────────────────────────────────────────────────────────────
+== 1. 頁面初始化 ==
+'──────────────────────────────────────────────────────────────
+
+User    ->  Browser  : 導覽至 /kanban/{mapId}
+Browser ->  Page     : OnInitializedAsync()
+Page    ->  Page     : PermSvc.HasPermissionAsync\n(KANBAN_VIEW)
+
+Page    ->  Prefs    : EnsureLoadedAsync(JS)
+note right of Prefs  : 從 localStorage 讀取\nSelectedMapId
+
+alt SelectedMapId ≠ 路由 mapId
+  Page  ->  Nav      : NavigateTo(/kanban/{selectedId},\nreplace:true)
+  Nav   --> Browser  : 重新導覽（early return）
+end
+
+Page    ->  MapSvc   : GetAllAsync()
+MapSvc  --> Page     : AllMaps
+Page    ->  LayoutSvc: GetPublishedVersionAsync(MapId)
+LayoutSvc --> Page   : PublishedVersion
+Page    ->  AlarmSvc : GetActiveAlarmsAsync()
+AlarmSvc --> Page    : ActiveAlarms
+
+Page    ->  Prefs    : SetSelectedMapId(MapId)\n+ SaveAsync(JS)
+Page    ->  Page     : StartCarousel()
+note right            : 建立 CancellationTokenSource\n篩選 CarouselEnabled 地圖\n啟動 CarouselTickAsync
+
+Page    ->  Hub      : HubConnectionBuilder\n.WithUrl(alarmHubPath)\n.Build().StartAsync()
+Hub     --> Page     : 連線成功
+
+Page    --> Browser  : 初始 render
+
+'──────────────────────────────────────────────────────────────
+== 2. 地圖輪播 ==
+'──────────────────────────────────────────────────────────────
+
+loop 每秒 tick（PeriodicTimer）
+  Page  ->  Page     : _carouselRemainingSeconds--
+  Page  ->  Browser  : InvokeAsync(StateHasChanged)
+  note right          : 輪播徽章倒數更新\n（position:absolute 在 wrapper 內\n全螢幕模式仍可見）
+end
+
+Page    ->  Nav      : NavigateTo("/kanban/{nextMapId}")
+note right of Nav     : 同一 component 複用\n不觸發 OnInitializedAsync
+
+Nav     ->  Page     : OnParametersSetAsync()
+Page    ->  Page     : 重置狀態：\nIsEditMode = false\nShowVersions = false\n_carouselPaused = false
+Page    ->  MapSvc   : GetAllAsync()
+MapSvc  --> Page     : AllMaps
+Page    ->  LayoutSvc: GetPublishedVersionAsync(MapId)
+LayoutSvc --> Page   : PublishedVersion (new map)
+Page    ->  AlarmSvc : GetActiveAlarmsAsync()
+AlarmSvc --> Page    : ActiveAlarms
+Page    ->  Prefs    : SetSelectedMapId(MapId) + SaveAsync(JS)
+Page    ->  Page     : StartCarousel()
+
+'──────────────────────────────────────────────────────────────
+== 3. 編輯模式與版本發布 ==
+'──────────────────────────────────────────────────────────────
+
+User    ->  Toolbar  : 點擊「✏️ 編輯」
+Toolbar ->  Page     : IsEditModeChanged(true)
+
+Page    ->  LayoutSvc: GetVersionHistoryAsync(MapId)
+LayoutSvc --> Page   : versions
+
+alt 存在未發布草稿
+  Page  ->  Dialog   : Confirm("是否繼續草稿？")
+  Dialog --> User    : 彈出確認對話框
+  User  ->  Dialog   : 繼續編輯 / 重新開始 / 取消
+  alt 取消
+    Dialog --> Page  : resume = null
+    Page   ->  Page  : IsEditMode = false（取消進入編輯）
+  else 繼續或重新開始
+    Dialog --> Page  : resume = true / false
+    Page   ->  Page  : _resumeDraftId = latestDraft.Id (或 null)
+  end
+end
+
+Page    ->  Page     : IsEditMode = true\nStopCarousel()
+Page    ->  Canvas   : re-render（編輯模式）
+Canvas  ->  Browser  : JS: kanbanDrag.init\n("map-canvas", dotNetRef)
+note right            : SortableJS 啟用\nwidget 可拖曳（dashed border）
+
+User    ->  Canvas   : 拖拉設備至新位置
+Canvas  ->  Browser  : JS Interop callback\nOnEquipmentMoved(equipmentId, x, y)
+Browser ->  Canvas   : [JSInvokable]\nOnEquipmentMoved()
+Canvas  ->  EquipSvc : SaveWidgetAsync(widget)
+EquipSvc --> Canvas  : widget (updated)
+Canvas  ->  Browser  : StateHasChanged
+
+User    ->  Toolbar  : 點擊「💾 存草稿」
+Toolbar ->  Page     : OnSaveDraft
+Page    ->  LayoutSvc: SaveDraftAsync(MapId,\nlayoutJson, user)
+LayoutSvc --> Page   : DraftId
+Page    ->  Browser  : NotifySvc.Notify\n("草稿已儲存", vN)
+
+User    ->  Toolbar  : 點擊「🚀 發布」
+Toolbar ->  Page     : OnPublish
+Page    ->  LayoutSvc: PublishAsync(DraftId)
+LayoutSvc -> LayoutSvc: Archive 舊 Published\nDraft → Published\nPublishedAt = UtcNow
+LayoutSvc --> Page   : PublishedVersion (new)
+Page    ->  Page     : IsEditMode = false\n_resumeDraftId = null\n_carouselPaused = false\nStartCarousel()
+Page    ->  Browser  : re-render + 成功通知
+
+'──────────────────────────────────────────────────────────────
+== 4. 版本面板（疊加覆蓋） ==
+'──────────────────────────────────────────────────────────────
+
+User    ->  Toolbar  : 點擊「📋 版本」
+Toolbar ->  Page     : OnShowVersions
+Page    ->  Page     : ShowVersions = true\nStopCarousel()\n_carouselPaused = true
+note right            : 版本面板以 position:absolute\nz-index:300 疊加於地圖\n寬 320px，不縮小地圖區域
+
+Page    ->  VerPanel : render
+VerPanel -> LayoutSvc: GetVersionHistoryAsync(MapId)
+LayoutSvc --> VerPanel: versions（降冪排列）
+VerPanel --> Browser : 顯示版本列表\n（深色抽屜風格，非 DataGrid）
+
+opt 回溯操作（Archived 版本）
+  User    ->  VerPanel : 點擊「回溯」
+  VerPanel -> LayoutSvc: RollbackAsync(versionId)
+  LayoutSvc -> LayoutSvc: Archive 現有 Published\ntarget → Published\nPublishedAt = UtcNow
+  LayoutSvc --> VerPanel: 完成
+  VerPanel -> Page    : OnRolledBack
+  Page    ->  LayoutSvc: GetPublishedVersionAsync(MapId)
+  LayoutSvc --> Page  : PublishedVersion (rolled back)
+  Page    ->  Browser : InvokeAsync(StateHasChanged)
+end
+
+User    ->  Toolbar  : 再次點擊「📋 版本」（關閉）
+Page    ->  Page     : ShowVersions = false\n_carouselPaused = false\nStartCarousel(_carouselRemainingSeconds)
+
+'──────────────────────────────────────────────────────────────
+== 5. 設備詳情抽屜 ==
+'──────────────────────────────────────────────────────────────
+
+User    ->  Canvas   : 點擊設備 Widget
+Canvas  ->  Canvas   : HandleWidgetClick(widget)
+Canvas  ->  EquipSvc : GetLinkConfigsAsync(equipmentId)
+EquipSvc --> Canvas  : LinkConfigs
+Canvas  ->  Canvas   : DrawerOpen = true
+note right            : EquipmentDetailDrawer 展開\n（position:absolute，右側）\n包含 RadzenTabs：\n當前數值 / 工單 / 警報歷史 / 文件 / CustomUrl
+
+Canvas  --> Browser  : render drawer
+
+User    ->  Canvas   : 點擊 Widget 以外區域（關閉）
+Canvas  ->  Canvas   : DrawerOpen = false
+Canvas  --> Browser  : re-render
+
+'──────────────────────────────────────────────────────────────
+== 6. 即時警報（SignalR） ==
+'──────────────────────────────────────────────────────────────
+
+note over Hub         : 後台輪詢或事件觸發\n警報條件評估
+
+Hub     ->  Hub      : AlarmService.EvaluateAsync\n(equipmentId, latestData)
+Hub     ->  Hub      : 條件符合 → INSERT\nkanban_alarm_records
+Hub     ->  Hub      : IHubContext.Clients.All\n.SendAsync("ReceiveAlarm",\nequipmentId, level, msg)
+
+Hub     -->  Browser : WebSocket push
+Browser ->   Page    : HubConn.On<>("ReceiveAlarm")\ncallback（catch 防止斷線）
+Page    ->   AlarmSvc: GetActiveAlarmsAsync()
+AlarmSvc --> Page    : ActiveAlarms (updated)
+Page    ->   Browser : InvokeAsync(StateHasChanged)
+Browser ->   Browser : AlarmToast →\nRadzenNotification 彈出
+note right            : duration: 5000ms\nSeverity: Error/Warning/Info
+
+'──────────────────────────────────────────────────────────────
+== 7. 設定管理 ==
+'──────────────────────────────────────────────────────────────
+
+User    ->  Browser  : 導覽至 /kanban/settings
+Browser ->  Browser  : MainLayout.IsKanbanActive = true\n(path starts with /kanban/)\nNav link 保持白色
+note right            : NavLink 已改為 <a> +\nNavigationManager.LocationChanged\n所有 /kanban/{n} 均維持 active
+
+Browser ->  Page     : KanbanSettingsPage\nOnInitializedAsync()
+Page    ->  Page     : PermSvc.HasPermissionAsync\n(KANBAN_SETTINGS)
+Page    ->  EquipSvc : GetAllEquipmentAsync()
+EquipSvc --> Page    : AllEquipment
+Page    ->  MapSvc   : GetAllAsync()
+MapSvc  --> Page     : AllMaps（含 Version 欄位）
+Page    --> Browser  : render（4 頁籤）
+
+opt 新增/編輯設備
+  User  ->  Browser  : 操作設定管理 DataGrid
+  Browser -> Page    : OnEquipmentUpdate(eq)
+  Page  ->  EquipSvc : CreateEquipmentAsync / UpdateEquipmentAsync
+  EquipSvc --> Page  : updated
+  Page  ->  Browser  : re-render
+end
+
+opt 地圖管理（含版本欄）
+  User  ->  Browser  : 查看已匯入地圖列表
+  note right          : DataGrid 顯示：\n名稱 / 格式 / 建立時間 / 版本\nFactoryMap.Version ("v1", "v2")
+  User  ->  Browser  : 上傳新地圖
+  Browser -> Page    : MapImportPanel.DoImport()
+  Page  ->  MapSvc   : ImportAsync(stream, fileName, format)
+  MapSvc --> Page    : FactoryMap (new)
+  Page  ->  Browser  : re-render 地圖列表
+end
+
+@enduml
