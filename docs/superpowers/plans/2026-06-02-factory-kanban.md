@@ -128,7 +128,11 @@ CREATE TABLE kanban_factory_maps (
     FormatType TINYINT NOT NULL,
     FilePath VARCHAR(500) NOT NULL,
     ThumbnailPath VARCHAR(500),
-    CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    Version VARCHAR(50) NOT NULL DEFAULT 'v1',        -- 顯示於地圖管理版本欄
+    CarouselEnabled TINYINT NOT NULL DEFAULT 0,       -- 是否加入輪播序列
+    CarouselSeconds INT NOT NULL DEFAULT 10,          -- 停留秒數
+    CarouselOrder INT NOT NULL DEFAULT 0              -- 輪播排序（升冪）
 );
 
 -- LayoutVersions
@@ -4334,4 +4338,65 @@ git commit -m "feat: complete TPS.Nexus.Kanban module — factory kanban with Bl
 | LayoutVersionPanel with rollback | Task 19 |
 
 All spec requirements covered.
+
+---
+
+## Session Changes — 2026-06-07
+
+> 紀錄 2026-06-04 ~ 2026-06-07 session 對 Demo 實作所做的異動，供日後移植至正式模組時參考。
+
+### 新功能
+
+#### 地圖輪播（Map Carousel）
+- `FactoryMap` 新增：`CarouselEnabled`、`CarouselSeconds`、`CarouselOrder`、`Version`
+- `KanbanMapPage` 新增：`StartCarousel()` / `StopCarousel()` / `CarouselTickAsync()` / `ToggleCarouselPause()`
+- 輪播以 `PeriodicTimer(1s)` 倒數，到 0 後 `NavigationManager.NavigateTo("/kanban/{nextId}")`
+- `UserPrefsService`（`TPS.Nexus.Kanban.Web/Services/`）：透過 `IJSRuntime` 存取 localStorage，跨地圖保持使用者最後選取的地圖
+
+#### 版本面板疊加
+- `LayoutVersionPanel` 以 `position:absolute;right:0;top:0;z-index:300` 疊加於地圖，不縮小地圖區域
+- 開啟時暫停輪播（`_carouselPaused = true`），關閉時恢復
+- 父容器改為 `position:relative; height:calc(100vh - 102px)`
+
+### UI 實作異動
+
+#### MapEditorToolbar（Task 18 修正）
+原計畫使用 `RadzenToolbar` + `RadzenButton` + `RadzenDropDown`，改為：
+- 容器：`<div id="kanban-map-toolbar">` + dark inline style
+- 按鈕：native `<button>` + `const string` inline style 常數（DefaultBtn、SuccessBtn 等）
+- 地圖選單：native `<select>` + `@onchange`
+- 移除已發布版本文字（`v{n} 已發布`）
+- 新增 `AllMaps` + `CurrentMapId` + `OnMapSelected` parameters
+
+**原因**：Radzen 5.x CSS 在 `!important` 同等優先級下覆蓋自訂 CSS；inline style 是唯一不被覆蓋的方式。
+
+#### LayoutVersionPanel（Task 19 修正）
+原計畫使用 `RadzenDataGrid`，改為深色抽屜風格 flex 列表：
+- 每列：版本號（藍色）、狀態 badge（顏色對應）、發布時間、建立者、回溯按鈕
+- 與 `EquipmentDetailDrawer` 視覺風格一致
+- 寬度 320px（與設備抽屜相同）
+
+#### FactoryMapCanvas（Task 16 修正）
+- `#kanban-fs-wrapper` 加入 `overflow:hidden`（避免 drawer `translateX` 溢出）
+- 輪播倒數徽章移入 wrapper 內（`position:absolute`），修正全螢幕模式下消失問題
+- 設備 palette 可見性改為 `(_equipDrawerOpen && IsEditMode)`（避免點版本按鈕顯示設備 palette）
+- 新增 4 個輪播相關 parameters
+
+#### KanbanMapPage（Task 20 修正）
+- `OnParametersSetAsync` 重置 `_carouselPaused = false`
+- `HandleShowVersions()` 整合輪播暫停/恢復
+- `HandlePublish()` 後重啟輪播
+
+#### MainLayout（Demo 層修正）
+- `NavLink href="/kanban/1"` 改為 `<a>` + `IsKanbanActive` computed property
+- 訂閱 `NavigationManager.LocationChanged`，所有 `/kanban/{n}` URL 均顯示 active
+
+### 設定頁更新（KanbanSettingsPage / Task 20 修正）
+- 地圖管理 DataGrid 新增「版本」欄（`FactoryMap.Version`）
+- `MapEditDialog` 新增 Version 欄位
+
+### DataGrid 高度規格（kanban.css）
+- Header row 與 data row 均為 38px
+- `line-height: 38px` 垂直置中
+- 套用於 `.kanban-light-grid` 主題
 

@@ -1,7 +1,7 @@
 # TPS.Nexus 工廠看板系統模組 — 設計規格
 
-**日期**: 2026-06-01（更新：2026-06-02）
-**版本**: 1.2
+**日期**: 2026-06-01（更新：2026-06-07）
+**版本**: 1.3
 **狀態**: 已核准
 
 ---
@@ -13,6 +13,7 @@
 | 1.0 | 2026-06-01 | 初版 |
 | 1.1 | 2026-06-01 | Equipment 位置欄位移至 EquipmentWidget |
 | 1.2 | 2026-06-02 | 宿主確認為 ASP.NET Core MVC；UI 庫由 DevExpress 改為 Radzen Blazor + SortableJS；資料庫確認為 MySQL；模組目錄結構更新 |
+| 1.3 | 2026-06-07 | 新增地圖輪播功能（FactoryMap + KanbanMapPage）；FactoryMapCanvas 加入輪播徽章（全螢幕修正）；工具列改用 native button/select（Radzen CSS 覆蓋問題）；LayoutVersionPanel 改為深色抽屜風格；地圖管理新增版本欄位；MainLayout NavLink 修正；新增 UserPrefsService；DataGrid header 高度對齊 |
 
 ---
 
@@ -155,6 +156,10 @@ AlarmService.EvaluateAsync() 偵測條件觸發
 #### FactoryMap — 廠區地圖
 ```csharp
 Id, Name, FormatType(MapFormatType), FilePath, ThumbnailPath, CreatedAt
+Version           // string, e.g. "v1"、"v2"，顯示於地圖管理版本欄
+CarouselEnabled   // bool，是否加入輪播序列
+CarouselSeconds   // int，在此地圖停留秒數（預設 10）
+CarouselOrder     // int，輪播排序（升冪）
 ```
 
 #### LayoutVersion — 佈局版本
@@ -213,6 +218,22 @@ LinkType(LinkType), TabLabel, UrlTemplate, DataSourceConfigId(nullable), Display
 | `AlarmLevel` | Info, Warning, Critical |
 | `IconType` | CssClass, CustomImage |
 | `LinkType` | WorkOrder, AlarmHistory, Document, CustomUrl |
+
+### 4.4 UserPrefsService（Web 層，非 Core 介面）
+
+```csharp
+// TPS.Nexus.Kanban.Web/Services/UserPrefsService.cs
+// 透過 IJSRuntime 讀寫 localStorage，跨地圖導覽保持使用者最後選取的地圖 ID
+public class UserPrefsService
+{
+    public int? SelectedMapId { get; private set; }
+    Task EnsureLoadedAsync(IJSRuntime js)   // 首次加載時從 localStorage 讀取
+    void SetSelectedMapId(int id)
+    Task SaveAsync(IJSRuntime js)            // 寫入 localStorage
+}
+```
+
+---
 
 ### 4.3 服務介面
 
@@ -307,14 +328,26 @@ TPS.Nexus.Kanban.Services/
 ### 6.1 FactoryMapCanvas 圖層架構
 
 ```
-<div style="position:relative">                         ← 座標基準容器
+<div id="kanban-fs-wrapper" style="position:relative;overflow:hidden">  ← 全螢幕容器（overflow:hidden 避免 drawer 溢出）
   ① <MapLayer />                                        ← 底層：廠區樓層圖
      PNG/JPG → <img>；SVG → inline <svg>；DXF → 轉換後 <svg>
   ② @foreach widget → <EquipmentWidgetPanel />          ← 設備層（position:absolute）
      style="left:@widget.PositionX px; top:@widget.PositionY px"
   ③ <EquipmentTooltip />                                ← 互動層（最上層）
      <EquipmentDetailDrawer />
+  ④ 輪播倒數徽章（position:absolute，right:16px bottom:16px）← 在 wrapper 內部，全螢幕不消失
 </div>
+```
+
+**全螢幕修正說明**：CSS `position:fixed` 元素在全螢幕 API 下若在 fullscreen element 之外則不可見。
+輪播徽章改為 `position:absolute` 並放在 `#kanban-fs-wrapper` 內部，確保全螢幕模式正常顯示。
+
+**FactoryMapCanvas 輪播相關 Parameters**：
+```csharp
+[Parameter] public bool CarouselVisible { get; set; }
+[Parameter] public bool CarouselPaused { get; set; }
+[Parameter] public int CarouselRemainingSeconds { get; set; }
+[Parameter] public EventCallback OnCarouselTogglePause { get; set; }
 ```
 
 ### 6.2 設備互動：三層資訊揭露
@@ -345,8 +378,16 @@ TPS.Nexus.Kanban.Services/
 
 | 頁面 | 路由 | 說明 |
 |---|---|---|
-| `KanbanMapPage.razor` | `/kanban/{mapId}` | 主看板頁：地圖畫布 + 工具列 + 警報面板 |
-| `KanbanSettingsPage.razor` | `/kanban/settings` | 設定：設備管理、資料來源、圖示上傳 |
+| `KanbanMapPage.razor` | `/kanban/{mapId}` | 主看板頁：地圖畫布 + 工具列 + 版本疊加面板 + 輪播管理 |
+| `KanbanSettingsPage.razor` | `/kanban/settings` | 設定：設備管理、資料來源、圖示上傳、地圖管理（含版本欄位） |
+
+**KanbanMapPage 重要設計決策**：
+- **版本面板**：`position:absolute` 疊加於地圖之上（`z-index:300`），寬 320px，開啟時暫停輪播，關閉時恢復
+- **版本面板疊加容器**：`position:relative; height:calc(100vh - 102px)` 的父 div，FactoryMapCanvas 與版本面板為兄弟元素
+- **輪播**：`PeriodicTimer` 每秒 tick，到 0 時呼叫 `NavigationManager.NavigateTo` 切換到下一張地圖
+- **暫停場景**：進入編輯模式、開啟版本面板、使用者手動暫停
+- **地圖切換狀態重置**：`OnParametersSetAsync` 重置 `IsEditMode`、`ShowVersions`、`_carouselPaused`
+- **UserPrefsService**：記錄最後使用的地圖 ID，頁面初始化時若與 URL 不同則 redirect
 
 ### 6.5 元件清單（Components/）
 
@@ -368,12 +409,17 @@ Drawer/
                                 RadzenTabs + RadzenDataGrid + RadzenChart
 
 Editor/
-  MapEditorToolbar.razor    — RadzenToolbar：編輯/檢視切換、草稿/發布
+  MapEditorToolbar.razor    — 工具列：編輯/檢視切換、草稿/發布、版本按鈕
+                              ⚠ 使用 native <button> + inline style（非 RadzenButton）
+                              ⚠ 多地圖時使用 native <select>（非 RadzenDropDown）
+                              原因：Radzen CSS 在相同優先級下覆蓋 custom CSS，inline style 是唯一可靠解法
   DraggableEquipmentItem.razor — SortableJS 驅動的可拖拉設備節點
   WidgetConfigurator.razor  — RadzenAccordion：設定元件組合與資料源
 
 Version/
-  LayoutVersionPanel.razor  — RadzenDataGrid：版本清單（發布/回溯操作）
+  LayoutVersionPanel.razor  — 深色抽屜風格版本清單（非 RadzenDataGrid）
+                              與 EquipmentDetailDrawer 風格一致：深色背景、flex row、狀態 badge
+                              寬度 320px，疊加地圖（position:absolute）不縮放地圖區域
 
 Alarm/
   AlarmBadge.razor          — 設備角標（有警報時顯示）
@@ -383,21 +429,27 @@ Alarm/
 
 ### 6.6 Radzen 元件對應
 
-| 功能 | Radzen 元件 | 備註 |
+| 功能 | 元件 | 備註 |
 |---|---|---|
 | 趨勢圖表（Drawer） | `RadzenChart` | 折線/柱狀/面積 |
 | Hover 快覽圖（Tooltip） | `RadzenChart`（小尺寸） | 嵌入 Tooltip 內 |
 | Hover 快覽面板 | `RadzenTooltip` | |
 | 詳情側欄 | `RadzenSidebar` | |
 | 警報通知 | `RadzenNotification` | |
-| 資料清單（工單/版本） | `RadzenDataGrid` | |
+| 資料清單（工單/警報） | `RadzenDataGrid` | |
+| 版本清單 | **native HTML**（自訂 flex 列表） | ⚠ 不用 RadzenDataGrid，深色抽屜風格 |
 | 檔案上傳 | `RadzenUpload` | |
-| 工具列 | `RadzenToolbar` | |
+| 工具列按鈕 | **native `<button>`** + inline style | ⚠ 不用 RadzenButton，避免 Radzen CSS 覆蓋 |
+| 地圖下拉選單 | **native `<select>`** + inline style | ⚠ 不用 RadzenDropDown，避免輪播後顏色異常 |
 | 頁籤 | `RadzenTabs` | |
 | 右鍵選單 | `RadzenContextMenu` | |
 | 元件設定面板 | `RadzenAccordion` | |
 | 設定表單 | `RadzenTemplateForm` + `RadzenTextBox` | |
 | **拖拉放置** | **SortableJS**（JS 套件） | Blazor JS Interop 呼叫 |
+
+**Radzen CSS 覆蓋問題說明**：
+Radzen 樣式表在自訂 CSS 之後載入，對同等優先級的 `!important` 規則 Radzen 勝出。
+解決方案：工具列按鈕、地圖選單改用 native HTML 元素搭配 inline style（inline style 優先級最高）。
 
 ### 6.7 SortableJS 整合方式
 
@@ -471,7 +523,36 @@ public async Task OnEquipmentMoved(string equipmentId, int newIndex)
 
 ---
 
-## 10. 佈局版本管理
+## 10. 地圖輪播功能
+
+**資料模型擴充**（`FactoryMap`）：
+- `CarouselEnabled` (`bool`) — 此地圖是否加入輪播
+- `CarouselSeconds` (`int`) — 停留秒數，預設 10
+- `CarouselOrder` (`int`) — 排序，升冪，`0` 優先
+
+**KanbanMapPage 輪播邏輯**：
+```
+StartCarousel()
+  → 篩選 AllMaps.Where(m => m.CarouselEnabled)，依 CarouselOrder 排序
+  → 建立 CancellationTokenSource + PeriodicTimer（1 秒 tick）
+  → 每 tick: _carouselRemainingSeconds--，StateHasChanged
+  → 歸零時: Navigation.NavigateTo("/kanban/{nextMapId}")
+  → NavigateTo 觸發 OnParametersSetAsync → 重置狀態 → StartCarousel 重啟
+```
+
+**暫停規則**：
+| 場景 | CarouselPaused | 計時器 |
+|---|---|---|
+| 進入編輯模式 | false | 停止（不顯示徽章） |
+| 開啟版本面板 | true | 停止（顯示暫停徽章） |
+| 使用者點暫停 | true | 停止（顯示暫停徽章） |
+| 切換地圖（OnParametersSetAsync） | false | 重新啟動 |
+
+**輪播徽章位置**：放在 `#kanban-fs-wrapper` 內（`position:absolute; bottom:16px; right:16px`），全螢幕模式可見。
+
+---
+
+## 11. 佈局版本管理
 
 - **草稿（Draft）**：編輯模式下儲存，不影響檢視模式
 - **已發布（Published）**：同一時間只有一個 Published 版本，發布後舊版本變為 Archived
@@ -480,7 +561,42 @@ public async Task OnEquipmentMoved(string equipmentId, int newIndex)
 
 ---
 
-## 11. 範圍外（Out of Scope）
+## 12. MainLayout NavLink 設計
+
+`TPS.Nexus.Kanban.Demo/MainLayout.razor` 的「看板地圖」連結**不能用 `NavLink`**：
+
+- `NavLink` 以 `href="/kanban/1"` 為基準，只在 `/kanban/1` 時套用 `active` class
+- 輪播切換到 `/kanban/2` 後，active class 消失 → 顯示藍色（未點擊色）
+
+**正確做法**：
+```csharp
+// 普通 <a> + NavigationManager.LocationChanged 訂閱
+private bool IsKanbanActive
+{
+    get {
+        var path = new Uri(Nav.Uri).LocalPath;
+        return path.StartsWith("/kanban/") && !path.StartsWith("/kanban/settings");
+    }
+}
+```
+- 任何 `/kanban/{n}` URL 皆套用 active（白色）
+- LocationChanged 事件觸發 `InvokeAsync(StateHasChanged)` 保持反應性
+- 實作 `IDisposable` 於 Dispose 中取消事件訂閱
+
+---
+
+## 13. DataGrid 高度規格
+
+`kanban-light-grid` 主題：header row 與 data row 均為 **38px**，由 CSS 強制設定：
+```css
+.kanban-light-grid .rz-grid-table thead th { height: 38px !important; }
+.kanban-light-grid .rz-grid-table td       { height: 38px !important; }
+```
+字體大小 12px，`line-height: 38px` 垂直置中。
+
+---
+
+## 14. 範圍外（Out of Scope）
 
 - 使用者帳號管理（由 TPS.Nexus 主系統負責）
 - 資料庫 Schema Migration（由呼叫端或 DBA 管理）
