@@ -180,7 +180,10 @@
             var published = await LayoutSvc.PublishAsync(DraftId.Value);
             PublishedVersion = published;
             DraftId          = null;
+            _resumeDraftId   = null;
             IsEditMode       = false;   // canvas EndEditSessionAsync will reload published state
+            _carouselPaused  = false;
+            StartCarousel();
             NotifySvc.Notify(NotificationSeverity.Success, "已發布", $"v{published.VersionNo}");
         }
         catch (Exception ex)

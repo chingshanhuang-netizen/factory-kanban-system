@@ -160,7 +160,7 @@
     --rz-grid-header-background-color: #daf0ec;
     --rz-grid-header-color: #0a6e64;
     --rz-grid-header-sorted-background-color: #c5e8e2;
-    --rz-grid-header-font-size: 15px;
+    --rz-grid-header-font-size: 16px;
     --rz-grid-header-font-weight: 700;
     --rz-grid-header-text-transform: none;
     --rz-grid-filter-background-color: #f6fcfb;
@@ -189,7 +189,7 @@
 .kanban-light-grid .rz-grid-table thead th .rz-column-title-content span {
     color: #0a6e64 !important;
     font-weight: 700 !important;
-    font-size: 15px !important;
+    font-size: 16px !important;
 }
 
 /* sort icon teal */
@@ -236,20 +236,49 @@
 }
 .kanban-light-grid .rz-cell-filter .rz-button { color: #0c8070 !important; }
 
-/* ── Data cells — black text, white background, compact height ── */
+/* ── Data cells — black text, white background, fixed row height ── */
 .kanban-light-grid .rz-grid-table td,
 .kanban-light-grid tbody tr.rz-data-row td {
     background: #ffffff !important;
     background-color: #ffffff !important;
     color: #000000 !important;
     border-bottom: 1px solid #e0f0ec !important;
-    padding: 0.35rem 0.6rem !important;
+    padding: 0 0.6rem !important;
+    height: 38px !important;
+    max-height: 38px !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+    font-size: 12px !important;
 }
 /* rz-cell-data must be transparent so it inherits the td row colour */
 .kanban-light-grid .rz-grid-table td .rz-cell-data {
     background: transparent !important;
     background-color: transparent !important;
     color: inherit !important;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: block;
+    line-height: 38px;
+    max-height: 38px;
+}
+/* images and icons inside cells — clamp to row height */
+.kanban-light-grid .rz-grid-table tbody tr.rz-data-row td img {
+    max-height: 26px !important;
+    width: auto;
+    vertical-align: middle;
+}
+.kanban-light-grid .rz-grid-table tbody tr.rz-data-row td i,
+.kanban-light-grid .rz-grid-table tbody tr.rz-data-row td span {
+    font-size: 1.3em;
+    vertical-align: middle;
+    line-height: 38px;
+}
+/* action buttons — stay on one line, vertically centred, font 10px */
+.kanban-light-grid .rz-grid-table tbody tr.rz-data-row td .rz-button {
+    vertical-align: middle;
+    font-size: 10px !important;
 }
 .kanban-light-grid .rz-grid-table thead th {
     padding: 0.45rem 0.6rem !important;
