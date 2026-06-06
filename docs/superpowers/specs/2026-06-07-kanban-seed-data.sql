@@ -13,10 +13,13 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ============================================================
--- 0. 前置條件
+-- 0. 欄位遷移（各欄獨立執行，已存在時 dbinit 記錄 ERR 但繼續）
 -- ============================================================
--- 本腳本假設已執行 2026-06-07-kanban-mysql-schema.sql 建立所有資料表。
--- 若資料表或欄位不存在，請先執行 Schema SQL。
+ALTER TABLE kanban_factory_maps      ADD COLUMN Floor     VARCHAR(50)  NULL COMMENT '樓層'       AFTER ThumbnailPath;
+ALTER TABLE kanban_factory_maps      ADD COLUMN Area      VARCHAR(100) NULL COMMENT '廠區'       AFTER Floor;
+ALTER TABLE kanban_equipment         ADD COLUMN Category  VARCHAR(100) NULL COMMENT '設備類別'   AFTER Name;
+ALTER TABLE kanban_equipment         ADD COLUMN MapName   VARCHAR(200) NULL COMMENT '所屬地圖'   AFTER Category;
+ALTER TABLE kanban_datasource_configs ADD COLUMN DataType VARCHAR(50)  NULL COMMENT '資料類型'  AFTER SourceType;
 
 -- ============================================================
 -- 1. 清除舊測試資料（按 FK 逆序）
@@ -101,11 +104,11 @@ VALUES
 -- 5. kanban_datasource_configs  (3 筆資料來源)
 -- ============================================================
 INSERT INTO kanban_datasource_configs
-    (Id, Name, SourceType, ConnectionString, FilePath, QueryOrPath, Parameters)
+    (Id, Name, SourceType, DataType, ConnectionString, FilePath, QueryOrPath, Parameters)
 VALUES
-    (1, 'CNC 主軸溫度',   1, NULL, '/data/cnc-temp.csv',  NULL, NULL),
-    (2, '機器人電流感測', 1, NULL, '/data/robot-amp.csv', NULL, NULL),
-    (3, '檢測站產量計數', 2, NULL, '/data/qc-count.json', NULL, NULL);
+    (1, 'CNC 主軸溫度',   1, '溫度', NULL, '/data/cnc-temp.csv',  NULL, NULL),
+    (2, '機器人電流感測', 1, '電流', NULL, '/data/robot-amp.csv', NULL, NULL),
+    (3, '檢測站產量計數', 2, '計數', NULL, '/data/qc-count.json', NULL, NULL);
 -- SourceType: 0=SQL 1=CSV 2=JSON 3=XML
 
 -- ============================================================

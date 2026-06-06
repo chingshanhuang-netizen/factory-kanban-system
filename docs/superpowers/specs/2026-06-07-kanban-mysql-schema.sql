@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS kanban_datasource_configs (
     Id                INT             NOT NULL AUTO_INCREMENT,
     Name              VARCHAR(200)    NOT NULL                    COMMENT '設定名稱',
     SourceType        TINYINT         NOT NULL                    COMMENT '0=SQL 1=CSV 2=JSON 3=XML',
+    DataType          VARCHAR(50)     NULL                        COMMENT '資料類型標籤（如 溫度/電流/計數）',
     ConnectionString  TEXT            NULL                        COMMENT 'SQL 連線字串（加密儲存建議）',
     FilePath          VARCHAR(500)    NULL                        COMMENT '檔案來源路徑',
     QueryOrPath       TEXT            NULL                        COMMENT 'SQL 語句 或 JSON/XML 路徑',

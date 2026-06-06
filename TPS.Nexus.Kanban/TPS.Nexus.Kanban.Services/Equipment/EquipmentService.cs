@@ -225,15 +225,18 @@ public class EquipmentService : IEquipmentService
         if (config.Id == 0)
             config.Id = await conn.ExecuteScalarAsync<int>(
                 """
-                INSERT INTO kanban_datasource_configs (Name, SourceType, ConnectionString, FilePath, QueryOrPath, Parameters)
-                VALUES (@Name, @SourceType, @ConnectionString, @FilePath, @QueryOrPath, @Parameters);
+                INSERT INTO kanban_datasource_configs
+                  (Name, SourceType, DataType, ConnectionString, FilePath, QueryOrPath, Parameters)
+                VALUES
+                  (@Name, @SourceType, @DataType, @ConnectionString, @FilePath, @QueryOrPath, @Parameters);
                 SELECT LAST_INSERT_ID();
                 """, config);
         else
             await conn.ExecuteAsync(
                 """
                 UPDATE kanban_datasource_configs
-                SET Name=@Name, SourceType=@SourceType, ConnectionString=@ConnectionString,
+                SET Name=@Name, SourceType=@SourceType, DataType=@DataType,
+                    ConnectionString=@ConnectionString,
                     FilePath=@FilePath, QueryOrPath=@QueryOrPath, Parameters=@Parameters
                 WHERE Id=@Id
                 """, config);
