@@ -8,6 +8,10 @@
         <RadzenTextBox @bind-Value="_edit.Name" Style="width:100%" />
     </RadzenFormField>
 
+    <RadzenFormField Text="版本" Variant="Variant.Outlined">
+        <RadzenTextBox @bind-Value="_edit.Version" Placeholder="例如：v1" Style="width:100%" />
+    </RadzenFormField>
+
     <RadzenFormField Text="樓層" Variant="Variant.Outlined">
         <RadzenTextBox @bind-Value="_edit.Floor" Placeholder="例如：1F" Style="width:100%" />
     </RadzenFormField>
@@ -61,6 +65,7 @@
         {
             Id              = Map.Id,
             Name            = Map.Name,
+            Version         = Map.Version,
             Floor           = Map.Floor,
             Area            = Map.Area,
             FormatType      = Map.FormatType,

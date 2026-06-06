@@ -380,6 +380,12 @@
                                                           Property="Name" Title="名稱"
                                                           Width="@_mapCols.Width("name")" MinWidth="80px" />
                                 }
+                                else if (colId == "version")
+                                {
+                                    <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
+                                                          Property="Version" Title="版本"
+                                                          Width="@_mapCols.Width("version")" MinWidth="60px" />
+                                }
                                 else if (colId == "floor")
                                 {
                                     <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
@@ -565,6 +571,7 @@
         _mapCols = new("map", new[]
         {
             new GridColumnPrefs.ColDef("name",           "名稱"),
+            new GridColumnPrefs.ColDef("version",        "版本",        80),
             new GridColumnPrefs.ColDef("floor",          "樓層",        80),
             new GridColumnPrefs.ColDef("area",           "區域",        80),
             new GridColumnPrefs.ColDef("formatType",     "格式",        80),
@@ -624,6 +631,7 @@
         "區域"      => "area",
         "類型"      => "sourceType",
         "查詢/路徑" => "queryOrPath",
+        "版本"      => "version",
         "輪播"      => "carousel",
         "次序"      => "carouselOrder",
         "時間(秒)"  => "carouselSecs",

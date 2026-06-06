@@ -3,78 +3,87 @@
 
 @if (_rollbackError != null)
 {
-    <div style="color:#f44336;font-size:0.82em;margin-bottom:6px">⚠ 回溯失敗：@_rollbackError</div>
+    <div style="color:#f44336;font-size:0.82em;padding:8px 12px;
+                background:rgba(244,67,54,.12);border-bottom:1px solid rgba(244,67,54,.3)">
+        ⚠ 回溯失敗：@_rollbackError
+    </div>
 }
 
-<div style="margin-bottom:6px;display:flex;justify-content:flex-end">
+<div style="padding:10px 12px;border-bottom:1px solid #1a3a5c">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="color:#fff;font-weight:bold;font-size:0.9em">📋 版本紀錄</span>
+        <span style="color:#888;font-size:0.78em">（@FilteredVersions.Count() 筆）</span>
+    </div>
     <input type="text" @bind="_search" @bind:event="oninput"
-           placeholder="🔍 搜尋..."
-           style="background:rgba(255,255,255,.07);border:1px solid #2a4a6c;
+           placeholder="🔍 搜尋版本或建立者..."
+           style="width:100%;background:rgba(255,255,255,.07);border:1px solid #2a4a6c;
                   color:#c8d8e8;border-radius:4px;padding:4px 10px;
-                  font-size:0.85em;outline:none;width:160px" />
+                  font-size:0.82em;outline:none;box-sizing:border-box" />
 </div>
-<RadzenDataGrid Data="@FilteredVersions" TItem="LayoutVersion" Style="font-size:0.85em; height: calc(100vh - 360px)"
-                AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
-                AllowPaging="true" PageSize="@_pageSize"
-                PageSizeOptions="@(new int[]{10,20,50,100})"
-                Page="@((args) => _page = args.PageIndex)"
-                PageSizeChanged="@((size) => { _pageSize = size; _page = 0; })"
-                ShowPagingSummary="true" PagingSummaryFormat="@PageSummary"
-                class="kanban-light-grid">
-    <Columns>
-        <RadzenDataGridColumn TItem="LayoutVersion" Property="VersionNo" Title="版本" Width="60px" />
-        <RadzenDataGridColumn TItem="LayoutVersion" Property="Status" Title="狀態" Width="80px">
-            <Template Context="v">
-                <span style="color:@StatusColor(v.Status)">@v.Status</span>
-            </Template>
-        </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LayoutVersion" Property="CreatedBy" Title="建立者" />
-        <RadzenDataGridColumn TItem="LayoutVersion" Property="PublishedAt" Title="發布時間" FormatString="{0:yyyy-MM-dd HH:mm}" />
-        <RadzenDataGridColumn TItem="LayoutVersion" Title="操作" Width="120px">
-            <Template Context="v">
-                @if (v.Status == LayoutStatus.Archived && CanPublish)
+
+@if (!FilteredVersions.Any())
+{
+    <div style="color:#555;font-size:0.82em;padding:20px 16px">尚無版本紀錄</div>
+}
+else
+{
+    @foreach (var v in FilteredVersions.OrderByDescending(v => v.VersionNo))
+    {
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;
+                    border-bottom:1px solid rgba(255,255,255,.05)">
+            <span style="color:#4fc3f7;font-weight:bold;font-size:0.88em;min-width:36px;flex-shrink:0">
+                v@(v.VersionNo)
+            </span>
+            <span style="font-size:0.75em;padding:2px 8px;border-radius:10px;flex-shrink:0;
+                         background:@StatusBg(v.Status);color:@StatusColor(v.Status)">
+                @StatusLabel(v.Status)
+            </span>
+            <div style="flex:1;overflow:hidden">
+                @if (v.PublishedAt.HasValue)
                 {
-                    <RadzenButton Text="回溯" Size="ButtonSize.ExtraSmall"
-                                  ButtonStyle="ButtonStyle.Warning"
-                                  Click="@(() => Rollback(v.Id))" />
+                    <div style="color:#888;font-size:0.76em;white-space:nowrap">
+                        @v.PublishedAt.Value.ToLocalTime().ToString("MM/dd HH:mm")
+                    </div>
                 }
-            </Template>
-        </RadzenDataGridColumn>
-    </Columns>
-</RadzenDataGrid>
+                @if (!string.IsNullOrEmpty(v.CreatedBy))
+                {
+                    <div style="color:#666;font-size:0.72em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                        @v.CreatedBy
+                    </div>
+                }
+            </div>
+            @if (v.Status == LayoutStatus.Archived && CanPublish)
+            {
+                <button @onclick="@(() => Rollback(v.Id))"
+                        style="background:rgba(122,80,0,.5);color:#ffb74d;border:1px solid #7a5000;
+                               border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.75em;
+                               flex-shrink:0;white-space:nowrap">
+                    回溯
+                </button>
+            }
+        </div>
+    }
+}
 
 @code {
     [Parameter, EditorRequired] public int MapId { get; set; }
     [Parameter] public EventCallback OnRolledBack { get; set; }
 
     private List<LayoutVersion> Versions = new();
-    private bool   CanPublish;
-    private string _search   = "";
-    private int    _page     = 0;
-    private int    _pageSize = 10;
-
-    private string PageSummary
-    {
-        get
-        {
-            var total = FilteredVersions.Count();
-            var pages = total == 0 ? 1 : (int)Math.Ceiling((double)total / _pageSize);
-            return $"Page {_page + 1} of {pages} ({total} Items)";
-        }
-    }
+    private bool    CanPublish;
+    private string  _search        = "";
+    private string? _rollbackError;
 
     private IEnumerable<LayoutVersion> FilteredVersions => string.IsNullOrWhiteSpace(_search)
         ? Versions
         : Versions.Where(v =>
             (v.CreatedBy?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true) ||
-            v.Status.ToString().Contains(_search, StringComparison.OrdinalIgnoreCase));
+            v.Status.ToString().Contains(_search, StringComparison.OrdinalIgnoreCase) ||
+            v.VersionNo.ToString().Contains(_search, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
-        // V-2: guard MapId before calling services — GetVersionHistoryAsync throws on MapId≤0
-        // and an unhandled exception in a lifecycle method crashes the Blazor circuit.
         if (MapId <= 0) return;
-
         CanPublish = await PermSvc.HasPermissionAsync(KanbanPermissions.Publish);
         await LoadVersions();
     }
@@ -84,12 +93,8 @@
         Versions = (await LayoutSvc.GetVersionHistoryAsync(MapId)).ToList();
     }
 
-    private string? _rollbackError;
-
     private async Task Rollback(int versionId)
     {
-        // W-11: RollbackAsync throws InvalidOperationException for non-Archived versions;
-        // surface the error in the panel rather than crashing the page.
         _rollbackError = null;
         try
         {
@@ -103,11 +108,27 @@
         }
     }
 
+    private static string StatusLabel(LayoutStatus s) => s switch
+    {
+        LayoutStatus.Published => "已發布",
+        LayoutStatus.Draft     => "草稿",
+        LayoutStatus.Archived  => "已封存",
+        _                      => s.ToString()
+    };
+
     private static string StatusColor(LayoutStatus s) => s switch
     {
         LayoutStatus.Published => "#4caf50",
-        LayoutStatus.Draft     => "#2196f3",
-        LayoutStatus.Archived  => "#607d8b",
-        _ => "#fff"
+        LayoutStatus.Draft     => "#4fc3f7",
+        LayoutStatus.Archived  => "#9e9e9e",
+        _                      => "#fff"
+    };
+
+    private static string StatusBg(LayoutStatus s) => s switch
+    {
+        LayoutStatus.Published => "rgba(76,175,80,.2)",
+        LayoutStatus.Draft     => "rgba(79,195,247,.2)",
+        LayoutStatus.Archived  => "rgba(158,158,158,.15)",
+        _                      => "transparent"
     };
 }

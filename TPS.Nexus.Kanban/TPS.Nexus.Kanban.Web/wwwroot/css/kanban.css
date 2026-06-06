@@ -281,7 +281,13 @@
     font-size: 10px !important;
 }
 .kanban-light-grid .rz-grid-table thead th {
-    padding: 0.45rem 0.6rem !important;
+    padding: 0 0.6rem !important;
+    height: 38px !important;
+    max-height: 38px !important;
+    overflow: hidden !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
 }
 
 /* alternating rows — td background; rz-cell-data inherits via transparent */
@@ -341,6 +347,7 @@
 
 /* ── Scrollbar ── */
 .kanban-light-grid .rz-grid-table-wrapper { overflow: auto !important; }
+
 .kanban-light-grid .rz-grid-table-wrapper::-webkit-scrollbar { width:6px; height:6px; }
 .kanban-light-grid .rz-grid-table-wrapper::-webkit-scrollbar-track { background:#f0f8f5; }
 .kanban-light-grid .rz-grid-table-wrapper::-webkit-scrollbar-thumb { background:#98cac3; border-radius:3px; }

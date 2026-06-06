@@ -1,13 +1,15 @@
 @inherits LayoutComponentBase
+@inject NavigationManager Nav
+@implements IDisposable
 
 <div style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
     <header class="app-header">
         <span class="app-header-title">⚙ TPS Nexus 看板系統</span>
         <span class="demo-badge">DEMO</span>
         <nav style="display:flex;gap:4px;margin-left:16px">
-            <NavLink href="/kanban/1" Match="NavLinkMatch.Prefix" class="nav-link">
+            <a href="/kanban/1" class="nav-link @(IsKanbanActive ? "active" : "")">
                 🗺 看板地圖
-            </NavLink>
+            </a>
             <NavLink href="/kanban/settings" Match="NavLinkMatch.All" class="nav-link">
                 ⚙ 設定管理
             </NavLink>
@@ -22,3 +24,29 @@
 </div>
 
 <RadzenComponents />
+
+@code {
+    private bool IsKanbanActive
+    {
+        get
+        {
+            var path = new Uri(Nav.Uri).LocalPath;
+            return path.StartsWith("/kanban/") && !path.StartsWith("/kanban/settings");
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+}

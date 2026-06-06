@@ -13,6 +13,8 @@ public class FactoryMap
     public string? Floor { get; set; }
     public string? Area  { get; set; }
 
+    public string Version { get; set; } = "v1";
+
     public bool CarouselEnabled { get; set; }
     public int  CarouselOrder   { get; set; } = 1;
     public int  CarouselSeconds { get; set; } = 10;

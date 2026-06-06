@@ -12,6 +12,7 @@ public class DemoMapImportService : IMapImportService
         {
             Id         = 1,
             Name       = "廠區一樓平面圖",
+            Version    = "v2",
             Floor      = "1F",
             Area       = "主廠區",
             FormatType = MapFormatType.Svg,
@@ -22,6 +23,7 @@ public class DemoMapImportService : IMapImportService
         {
             Id         = 2,
             Name       = "廠區二樓平面圖",
+            Version    = "v1",
             Floor      = "2F",
             Area       = "主廠區",
             FormatType = MapFormatType.Svg,
