@@ -76,4 +76,7 @@ public class DemoMapImportService : IMapImportService
         _maps.RemoveAll(m => m.Id == mapId);
         return Task.CompletedTask;
     }
+
+    public Task<bool> HasLayoutVersionsAsync(int mapId) =>
+        Task.FromResult(false);
 }

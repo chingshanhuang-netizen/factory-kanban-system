@@ -74,6 +74,8 @@
     private bool _carouselPaused;
     private int  _carouselRemainingSeconds;
     private int? _resumeDraftId;
+    private DotNetObjectReference<KanbanMapPage>? _dotNetRef;
+    private bool _keyboardRegistered;
 
     protected override async Task OnInitializedAsync()
     {
@@ -296,6 +298,28 @@
         else                 StartCarousel(_carouselRemainingSeconds);
     }
 
+    [JSInvokable]
+    public Task HandleSpaceKeyAsync()
+    {
+        if (IsEditMode) return Task.CompletedTask;
+        return InvokeAsync(() =>
+        {
+            ToggleCarouselPause();
+            StateHasChanged();
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_keyboardRegistered)
+        {
+            _keyboardRegistered = true;
+            _dotNetRef = DotNetObjectReference.Create(this);
+            try { await JS.InvokeVoidAsync("kanbanKeyboard.register", _dotNetRef); }
+            catch { }
+        }
+    }
+
     private void StopCarousel()
     {
         _carouselCts?.Cancel();
@@ -306,6 +330,8 @@
     public async ValueTask DisposeAsync()
     {
         StopCarousel();
+        try { await JS.InvokeVoidAsync("kanbanKeyboard.unregister"); } catch { }
+        _dotNetRef?.Dispose();
         if (HubConn != null)
         {
             // W-1: stop the connection gracefully before disposing to avoid leaving a

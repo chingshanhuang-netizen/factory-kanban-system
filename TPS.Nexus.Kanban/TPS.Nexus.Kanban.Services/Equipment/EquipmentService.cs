@@ -251,4 +251,22 @@ public class EquipmentService : IEquipmentService
         await using var conn = _db.CreateConnection();
         await conn.ExecuteAsync("DELETE FROM kanban_datasource_configs WHERE Id=@Id", new { Id = id });
     }
+
+    public async Task<bool> IsEquipmentInUseAsync(int equipmentId)
+    {
+        await using var conn = _db.CreateConnection();
+        var count = await conn.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM kanban_equipment_widgets WHERE EquipmentId=@EquipmentId",
+            new { EquipmentId = equipmentId });
+        return count > 0;
+    }
+
+    public async Task<bool> IsDataSourceInUseAsync(int dataSourceConfigId)
+    {
+        await using var conn = _db.CreateConnection();
+        var count = await conn.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM kanban_widget_components WHERE DataSourceConfigId=@DataSourceConfigId",
+            new { DataSourceConfigId = dataSourceConfigId });
+        return count > 0;
+    }
 }

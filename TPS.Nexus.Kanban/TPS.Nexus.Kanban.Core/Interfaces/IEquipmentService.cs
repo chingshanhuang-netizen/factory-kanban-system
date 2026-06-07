@@ -25,4 +25,7 @@ public interface IEquipmentService
     Task<IEnumerable<DataSourceConfig>> GetAllDataSourceConfigsAsync();
     Task<DataSourceConfig> SaveDataSourceConfigAsync(DataSourceConfig config);
     Task DeleteDataSourceConfigAsync(int id);
+
+    Task<bool> IsEquipmentInUseAsync(int equipmentId);
+    Task<bool> IsDataSourceInUseAsync(int dataSourceConfigId);
 }

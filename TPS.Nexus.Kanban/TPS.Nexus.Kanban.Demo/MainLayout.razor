@@ -13,6 +13,9 @@
             <NavLink href="/kanban/settings" Match="NavLinkMatch.All" class="nav-link">
                 ⚙ 設定管理
             </NavLink>
+            <NavLink href="/kanban/reports" Match="NavLinkMatch.All" class="nav-link">
+                📊 看板報表
+            </NavLink>
         </nav>
         <div style="margin-left:auto;color:#4a7a9b;font-size:11px">
             廠區一樓平面圖 &nbsp;|&nbsp; 3 台設備 &nbsp;|&nbsp; 1 個活躍警報
@@ -31,7 +34,9 @@
         get
         {
             var path = new Uri(Nav.Uri).LocalPath;
-            return path.StartsWith("/kanban/") && !path.StartsWith("/kanban/settings");
+            return path.StartsWith("/kanban/")
+                && !path.StartsWith("/kanban/settings")
+                && !path.StartsWith("/kanban/reports");
         }
     }
 

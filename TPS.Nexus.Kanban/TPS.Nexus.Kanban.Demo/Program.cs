@@ -6,6 +6,7 @@ using TPS.Nexus.Kanban.Core.Options;
 using TPS.Nexus.Kanban.Demo.Infrastructure;
 using TPS.Nexus.Kanban.Demo.Mocks;
 using TPS.Nexus.Kanban.Services.Alarm;
+using TPS.Nexus.Kanban.Services.Audit;
 using TPS.Nexus.Kanban.Services.Equipment;
 using TPS.Nexus.Kanban.Services.Hubs;
 using TPS.Nexus.Kanban.Services.Layout;
@@ -45,6 +46,10 @@ builder.Services.AddSingleton<IDataSourceService,         DemoDataSourceService>
 builder.Services.AddSingleton<IIconUploadService,         DemoIconUploadService>();
 builder.Services.AddSingleton<IIconGalleryService,        DemoIconGalleryService>();
 builder.Services.AddSingleton<IFunctionPermissionService, DemoPermissionService>();
+builder.Services.AddSingleton<ICurrentUserService,        DemoCurrentUserService>();
+
+// ── Audit log (real DB — delete operations are persisted) ─────
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 builder.Services.AddScoped<TPS.Nexus.Kanban.Web.Services.UserPrefsService>();
 

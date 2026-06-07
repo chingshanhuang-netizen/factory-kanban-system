@@ -9,4 +9,5 @@ public interface IMapImportService
     Task<IEnumerable<FactoryMap>> GetAllAsync();
     Task UpdateAsync(FactoryMap map);
     Task DeleteAsync(int mapId);
+    Task<bool> HasLayoutVersionsAsync(int mapId);
 }

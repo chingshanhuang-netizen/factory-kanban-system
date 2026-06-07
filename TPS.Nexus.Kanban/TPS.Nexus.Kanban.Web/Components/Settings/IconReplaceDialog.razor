@@ -1,0 +1,102 @@
+@inject IIconUploadService IconSvc
+@inject IOptions<KanbanModuleOptions> ModuleOpts
+@inject NotificationService NotifySvc
+@inject DialogService DialogSvc
+
+<RadzenStack Gap="12px" Style="padding:4px;min-width:380px">
+
+    <div style="padding:8px;background:rgba(255,255,255,.04);
+                border-radius:4px;border:1px solid rgba(255,255,255,.12);text-align:center">
+        <div style="color:#aaa;font-size:0.8em;margin-bottom:6px">目前圖示</div>
+        <img src="@OldIconUrl" alt="目前圖示"
+             style="max-width:100%;max-height:150px;object-fit:contain" />
+    </div>
+
+    <RadzenFormField Text="替換圖示格式" Variant="Variant.Outlined" Style="width:100%">
+        <RadzenDropDown @bind-Value="_replaceFormat" Data="@ReplaceFormatOptions"
+                        TextProperty="Label" />
+    </RadzenFormField>
+
+    <div>
+        <div style="color:#aaa;font-size:0.85em;margin-bottom:6px">選擇替換圖示</div>
+        <InputFile OnChange="@OnFileSelected"
+                   accept=".png,.jpg,.jpeg,.svg"
+                   style="width:100%;font-size:0.85em;color:#aaa" />
+    </div>
+
+    @if (!string.IsNullOrEmpty(_previewUrl))
+    {
+        <div style="padding:8px;background:rgba(255,255,255,.04);
+                    border-radius:4px;border:1px solid rgba(255,255,255,.12);text-align:center">
+            <div style="color:#aaa;font-size:0.8em;margin-bottom:6px">新圖示預覽</div>
+            <img src="@_previewUrl" alt="新圖示預覽"
+                 style="max-width:100%;max-height:150px;object-fit:contain" />
+        </div>
+    }
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+        <RadzenButton Text="取消" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />
+        <RadzenButton Text="替換" ButtonStyle="ButtonStyle.Primary"
+                      Disabled="@(_iconFileBytes == null || _uploading)"
+                      Click="@DoReplace" />
+    </div>
+
+</RadzenStack>
+
+@code {
+    [Parameter] public string OldIconUrl { get; set; } = string.Empty;
+
+    private byte[]? _iconFileBytes;
+    private string  _iconFileName = string.Empty;
+    private string  _previewUrl   = string.Empty;
+    private bool    _uploading;
+
+    private record ReplaceFormatOption(string Label, string MimeType);
+    private static readonly List<ReplaceFormatOption> ReplaceFormatOptions = new()
+    {
+        new("PNG 圖片",   "image/png"),
+        new("JPG 圖片",   "image/jpeg"),
+        new("SVG 向量圖", "image/svg+xml"),
+    };
+    private ReplaceFormatOption _replaceFormat = new("PNG 圖片", "image/png");
+
+    private async Task OnFileSelected(InputFileChangeEventArgs args)
+    {
+        _iconFileBytes = null;
+        _iconFileName  = string.Empty;
+        _previewUrl    = string.Empty;
+        try
+        {
+            var file = args.File;
+            await using var src = file.OpenReadStream(maxAllowedSize: ModuleOpts.Value.IconUploadMaxBytes);
+            using var ms        = new MemoryStream();
+            await src.CopyToAsync(ms);
+            _iconFileBytes = ms.ToArray();
+            _iconFileName  = file.Name;
+            _previewUrl    = $"data:{_replaceFormat.MimeType};base64,{Convert.ToBase64String(_iconFileBytes)}";
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "讀取圖示失敗", ex.Message);
+        }
+    }
+
+    private async Task DoReplace()
+    {
+        if (_iconFileBytes == null) return;
+        _uploading = true;
+        try
+        {
+            using var stream = new MemoryStream(_iconFileBytes);
+            var newUrl       = await IconSvc.UploadAsync(stream, _iconFileName);
+            DialogSvc.Close(newUrl);
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "替換圖示失敗", ex.Message);
+        }
+        finally { _uploading = false; }
+    }
+
+    private void Cancel() => DialogSvc.Close(null);
+}

@@ -6,6 +6,8 @@
 @inject NotificationService NotifySvc
 @inject DialogService DialogSvc
 @inject IIconGalleryService GallerySvc
+@inject IAuditLogService AuditSvc
+@inject ICurrentUserService CurrentUser
 @inject IOptions<KanbanModuleOptions> ModuleOpts
 @inject IJSRuntime JS
 @inject UserPrefsService UserPrefs
@@ -67,25 +69,49 @@
                             {
                                 <RadzenDataGridColumn @key="@colId" TItem="Equipment"
                                                       Property="Name" Title="名稱"
-                                                      Width="@_equipCols.Width("name")" MinWidth="80px" />
+                                                      Width="@_equipCols.Width("name")" MinWidth="80px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterEquipName"
+                                               @oninput="@((e) => { _filterEquipName = e.Value?.ToString() ?? ""; _equipPage = 0; })"
+                                               placeholder="搜尋名稱..." style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
                             }
                             else if (colId == "category")
                             {
                                 <RadzenDataGridColumn @key="@colId" TItem="Equipment"
                                                       Property="Category" Title="類別"
-                                                      Width="@_equipCols.Width("category")" MinWidth="80px" />
+                                                      Width="@_equipCols.Width("category")" MinWidth="80px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterEquipCategory"
+                                               @oninput="@((e) => { _filterEquipCategory = e.Value?.ToString() ?? ""; _equipPage = 0; })"
+                                               placeholder="搜尋類別..." style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
                             }
                             else if (colId == "tag")
                             {
                                 <RadzenDataGridColumn @key="@colId" TItem="Equipment"
                                                       Property="Tag" Title="標籤"
-                                                      Width="@_equipCols.Width("tag")" MinWidth="60px" />
+                                                      Width="@_equipCols.Width("tag")" MinWidth="60px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterEquipTag"
+                                               @oninput="@((e) => { _filterEquipTag = e.Value?.ToString() ?? ""; _equipPage = 0; })"
+                                               placeholder="搜尋標籤..." style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
                             }
                             else if (colId == "mapName")
                             {
                                 <RadzenDataGridColumn @key="@colId" TItem="Equipment"
                                                       Property="MapName" Title="地圖名稱"
-                                                      Width="@_equipCols.Width("mapName")" MinWidth="80px" />
+                                                      Width="@_equipCols.Width("mapName")" MinWidth="80px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterEquipMapName"
+                                               @oninput="@((e) => { _filterEquipMapName = e.Value?.ToString() ?? ""; _equipPage = 0; })"
+                                               placeholder="搜尋地圖名稱..." style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
                             }
                             else if (colId == "icon")
                             {
@@ -162,25 +188,49 @@
                             {
                                 <RadzenDataGridColumn @key="@colId" TItem="DataSourceConfig"
                                                       Property="Name" Title="名稱"
-                                                      Width="@_dsCols.Width("name")" MinWidth="80px" />
+                                                      Width="@_dsCols.Width("name")" MinWidth="80px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterDsName"
+                                               @oninput="@((e) => { _filterDsName = e.Value?.ToString() ?? ""; _dsPage = 0; })"
+                                               placeholder="搜尋名稱..." style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
                             }
                             else if (colId == "dataType")
                             {
                                 <RadzenDataGridColumn @key="@colId" TItem="DataSourceConfig"
                                                       Property="DataType" Title="資料類型"
-                                                      Width="@_dsCols.Width("dataType")" MinWidth="60px" />
+                                                      Width="@_dsCols.Width("dataType")" MinWidth="60px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterDsDataType"
+                                               @oninput="@((e) => { _filterDsDataType = e.Value?.ToString() ?? ""; _dsPage = 0; })"
+                                               placeholder="搜尋資料類型..." style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
                             }
                             else if (colId == "sourceType")
                             {
                                 <RadzenDataGridColumn @key="@colId" TItem="DataSourceConfig"
                                                       Property="SourceType" Title="類型"
-                                                      Width="@_dsCols.Width("sourceType")" MinWidth="60px" />
+                                                      Width="@_dsCols.Width("sourceType")" MinWidth="60px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterDsSourceType"
+                                               @oninput="@((e) => { _filterDsSourceType = e.Value?.ToString() ?? ""; _dsPage = 0; })"
+                                               placeholder="搜尋類型..." style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
                             }
                             else if (colId == "queryOrPath")
                             {
                                 <RadzenDataGridColumn @key="@colId" TItem="DataSourceConfig"
                                                       Property="QueryOrPath" Title="查詢/路徑"
-                                                      Width="@_dsCols.Width("queryOrPath")" MinWidth="80px" />
+                                                      Width="@_dsCols.Width("queryOrPath")" MinWidth="80px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterDsQueryOrPath"
+                                               @oninput="@((e) => { _filterDsQueryOrPath = e.Value?.ToString() ?? ""; _dsPage = 0; })"
+                                               placeholder="搜尋查詢/路徑..." style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
                             }
                             else if (colId == "actions")
                             {
@@ -205,136 +255,237 @@
 
             <!-- ── 圖示上傳 ─────────────────────────────────────────────── -->
             <RadzenTabsItem Text="圖示上傳">
-                <div style="display:flex;flex-direction:column;gap:16px;padding:4px 0;max-width:720px">
 
-                    <RadzenCard>
-                        <RadzenText TextStyle="TextStyle.Subtitle1" Style="margin-bottom:12px">上傳新圖示</RadzenText>
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                            <InputFile OnChange="@OnIconFileSelected"
-                                       accept=".png,.jpg,.jpeg,.svg"
-                                       style="flex:1;min-width:200px;color:#aaa" />
-                            <RadzenButton Text="上傳" ButtonStyle="ButtonStyle.Primary"
-                                          Size="ButtonSize.Small"
-                                          Disabled="@(_iconFileBytes == null)"
-                                          Click="@DoIconUpload" />
+                <!-- 上傳區 -->
+                <RadzenCard Style="padding:16px;margin-bottom:16px">
+                    <RadzenText TextStyle="TextStyle.H6">上傳圖示</RadzenText>
+
+                    <RadzenFormField Text="圖示格式" Style="width:100%;margin-top:8px">
+                        <RadzenDropDown @bind-Value="_iconFormat" Data="@IconFormatOptions"
+                                        TextProperty="Label" />
+                    </RadzenFormField>
+
+                    <div style="margin-top:12px">
+                        <InputFile OnChange="@OnIconFileSelected"
+                                   accept=".png,.jpg,.jpeg,.svg"
+                                   style="color:#aaa;width:100%" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_localPreviewUrl))
+                    {
+                        <div style="margin-top:10px;padding:8px;background:rgba(255,255,255,.04);
+                                    border-radius:4px;border:1px solid rgba(255,255,255,.12);text-align:center">
+                            <img src="@_localPreviewUrl" alt="圖示預覽"
+                                 style="max-width:100%;max-height:200px;object-fit:contain" />
                         </div>
-                        @if (!string.IsNullOrEmpty(_localPreviewUrl))
-                        {
-                            <div style="display:flex;align-items:center;gap:10px;margin-top:10px;
-                                        padding:8px;background:rgba(255,255,255,.05);border-radius:4px">
-                                <img src="@_localPreviewUrl" alt="預覽"
-                                     style="width:40px;height:40px;object-fit:contain" />
-                                <span style="color:#aaa;font-size:0.85em">選取預覽（尚未上傳）</span>
-                            </div>
-                        }
-                    </RadzenCard>
+                    }
 
-                    <RadzenCard>
-                        <RadzenText TextStyle="TextStyle.Subtitle1" Style="margin-bottom:4px">
-                            圖示庫
-                            @if (_allGalleryIcons.Count > 0)
-                            {
-                                <span style="color:#aaa;font-size:0.82em;margin-left:6px">（共 @_allGalleryIcons.Count 個，點選後可套用到設備）</span>
-                            }
-                        </RadzenText>
-                        @if (_allGalleryIcons.Count == 0)
+                    <RadzenButton Text="上傳並匯入" ButtonStyle="ButtonStyle.Primary"
+                                  Style="margin-top:12px;width:100%"
+                                  Disabled="@(_iconFileBytes == null)"
+                                  Click="@DoIconUpload" />
+
+                    @if (!string.IsNullOrEmpty(_iconStatusMessage))
+                    {
+                        <div style="margin-top:8px;color:@(_iconIsError ? "#f44336" : "#4caf50");font-size:0.85em">
+                            @_iconStatusMessage
+                        </div>
+                    }
+                </RadzenCard>
+
+                <!-- 工具列 -->
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                    <RadzenText TextStyle="TextStyle.Subtitle1">圖示庫</RadzenText>
+                    @if (_allGalleryIcons.Count > 0)
+                    {
+                        <span style="color:#aaa;font-size:0.82em">
+                            （共 @_allGalleryIcons.Count 個，點選「套用」可指派到設備）
+                        </span>
+                    }
+                    <span style="flex:1"></span>
+                    <input type="text" @bind="_iconSearch" @bind:event="oninput"
+                           placeholder="🔍 搜尋圖示..."
+                           style="background:rgba(255,255,255,.07);border:1px solid #2a4a6c;
+                                  color:#c8d8e8;border-radius:4px;padding:4px 10px;
+                                  font-size:0.85em;outline:none;width:180px" />
+                </div>
+
+                <!-- DataGrid -->
+                <RadzenDataGrid Data="@FilteredIcons" TItem="string"
+                                AllowSorting="false" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                                AllowPaging="true" PageSize="@_iconPageSize"
+                                PageSizeOptions="@(new int[]{10,20,50})"
+                                Page="@((args) => _iconPage = args.PageIndex)"
+                                PageSizeChanged="@((size) => { _iconPageSize = size; _iconPage = 0; })"
+                                ShowPagingSummary="true" PagingSummaryFormat="@IconSummary"
+                                AllowColumnResize="true" class="kanban-light-grid"
+                                Style="@(_selectedGalleryUrl == "" ? "height:calc(100vh - 520px)" : "height:calc(100vh - 700px)")">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="string" Title="圖示" Width="70px"
+                                              Sortable="false" Filterable="false" Resizable="false">
+                            <Template Context="url">
+                                <div @onclick="@(() => SelectGalleryIcon(url))"
+                                     title="點擊選取"
+                                     style="width:40px;height:40px;cursor:pointer;
+                                            border-radius:4px;padding:2px;
+                                            border:2px solid @(_selectedGalleryUrl == url ? "#4caf50" : "transparent");
+                                            background:rgba(255,255,255,.06)">
+                                    <img src="@url" style="width:100%;height:100%;object-fit:contain" />
+                                </div>
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="string" Title="檔名">
+                            <Template Context="url">
+                                <span style="font-size:0.85em;
+                                             color:@(_selectedGalleryUrl == url ? "#4caf50" : "#c8d8e8")">
+                                    @IconFileName(url)
+                                </span>
+                            </Template>
+                            <FilterTemplate Context="col">
+                                <input type="text" value="@_filterIconFileName"
+                                       @oninput="@((e) => { _filterIconFileName = e.Value?.ToString() ?? ""; _iconPage = 0; })"
+                                       placeholder="搜尋檔名..." style="@ColFilterStyle" />
+                            </FilterTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="string" Title="格式" Width="90px" Sortable="false">
+                            <Template Context="url">
+                                <span style="padding:2px 8px;border-radius:12px;font-size:0.82em;
+                                             background:@FormatColor(IconFormat(url));color:#fff">
+                                    @IconFormat(url)
+                                </span>
+                            </Template>
+                            <FilterTemplate Context="col">
+                                <input type="text" value="@_filterIconFormat"
+                                       @oninput="@((e) => { _filterIconFormat = e.Value?.ToString() ?? ""; _iconPage = 0; })"
+                                       placeholder="搜尋格式..." style="@ColFilterStyle" />
+                            </FilterTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="string" Title="使用設備" Width="220px"
+                                              Sortable="false">
+                            <Template Context="url">
+                                @{
+                                    var users = AllEquipment
+                                        .Where(e => e.IconType == IconType.CustomImage && e.IconValue == url)
+                                        .ToList();
+                                }
+                                @if (users.Count > 0)
+                                {
+                                    <span style="font-size:0.82em;color:#aaa">
+                                        @string.Join("、", users.Take(3).Select(e => e.Name))
+                                        @(users.Count > 3 ? $" 等共 {users.Count} 台" : "")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span style="font-size:0.82em;color:#555">—</span>
+                                }
+                            </Template>
+                            <FilterTemplate Context="col">
+                                <input type="text" value="@_filterIconUsedBy"
+                                       @oninput="@((e) => { _filterIconUsedBy = e.Value?.ToString() ?? ""; _iconPage = 0; })"
+                                       placeholder="搜尋使用設備..." style="@ColFilterStyle" />
+                            </FilterTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="string" Title="操作" Width="170px"
+                                              Sortable="false" Filterable="false" Resizable="false">
+                            <Template Context="url">
+                                <RadzenButton Text="套用"
+                                              Size="ButtonSize.ExtraSmall"
+                                              ButtonStyle="@(_selectedGalleryUrl == url ? ButtonStyle.Success : ButtonStyle.Light)"
+                                              Click="@(() => SelectGalleryIcon(url))" />
+                                <RadzenButton Text="編輯"
+                                              Size="ButtonSize.ExtraSmall"
+                                              Click="@(() => EditGalleryIcon(url))"
+                                              Style="margin-left:4px" />
+                                <RadzenButton Text="刪除"
+                                              Size="ButtonSize.ExtraSmall"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Click="@(() => DeleteGalleryIcon(url))"
+                                              Style="margin-left:4px" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+
+                <!-- 套用面板：點選「套用」後展開 -->
+                @if (!string.IsNullOrEmpty(_selectedGalleryUrl))
+                {
+                    <RadzenCard Style="margin-top:10px">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                            <img src="@_selectedGalleryUrl" alt="已選圖示"
+                                 style="width:40px;height:40px;object-fit:contain;flex-shrink:0;
+                                        background:rgba(255,255,255,.06);border-radius:4px;padding:4px;
+                                        border:2px solid #4caf50" />
+                            <RadzenText TextStyle="TextStyle.Subtitle1" Style="margin:0">套用到</RadzenText>
+                            <RadzenRadioButtonList @bind-Value="_assignToCategory"
+                                                   TValue="bool"
+                                                   Orientation="Orientation.Horizontal">
+                                <Items>
+                                    <RadzenRadioButtonListItem Text="設備類別" Value="@true" />
+                                    <RadzenRadioButtonListItem Text="指定設備" Value="@false" />
+                                </Items>
+                            </RadzenRadioButtonList>
+                            <span style="flex:1"></span>
+                            <RadzenButton Icon="close" Size="ButtonSize.ExtraSmall"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Click="@(() => { _selectedGalleryUrl = string.Empty; _assignTargetId = 0; _assignCategoryName = string.Empty; })"
+                                          title="關閉" />
+                        </div>
+                        @if (_assignToCategory)
                         {
-                            <p style="color:#666;font-size:0.85em;margin:8px 0 0">尚無圖示，請先上傳。</p>
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                                <RadzenDropDown @bind-Value="_assignCategoryName"
+                                                Data="@_allCategories" TValue="string"
+                                                Placeholder="選擇類別..."
+                                                Style="flex:1;min-width:160px" />
+                                <RadzenButton Text="套用到此類別" ButtonStyle="ButtonStyle.Success"
+                                              Size="ButtonSize.Small"
+                                              Disabled="@string.IsNullOrEmpty(_assignCategoryName)"
+                                              Click="@AssignIconToCategory" />
+                            </div>
+                            @if (!string.IsNullOrEmpty(_assignCategoryName))
+                            {
+                                var count = AllEquipment.Count(e => e.Category == _assignCategoryName);
+                                <div style="margin-top:8px;font-size:0.82em;color:#aaa">
+                                    將套用到「@_assignCategoryName」類別共 @count 台設備
+                                </div>
+                            }
                         }
                         else
                         {
-                            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
-                                @foreach (var (url, idx) in _allGalleryIcons.Select((u, i) => (u, i)))
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                                <RadzenDropDown @bind-Value="_assignTargetId"
+                                                Data="@_equipmentDisplayItems"
+                                                TextProperty="DisplayText" ValueProperty="Id"
+                                                TValue="int"
+                                                Placeholder="選擇設備..."
+                                                Style="flex:1;min-width:200px" />
+                                <RadzenButton Text="套用" ButtonStyle="ButtonStyle.Success"
+                                              Size="ButtonSize.Small"
+                                              Disabled="@(_assignTargetId == 0)"
+                                              Click="@AssignIconToEquipment" />
+                            </div>
+                            @if (_assignTargetId > 0)
+                            {
+                                var targetEq = AllEquipment.FirstOrDefault(e => e.Id == _assignTargetId);
+                                if (targetEq != null)
                                 {
-                                    var isSelected = url == _selectedGalleryUrl;
-                                    <div @key="@idx"
-                                         @onclick="@(() => SelectGalleryIcon(url))"
-                                         title="點擊選取"
-                                         style="width:56px;height:56px;cursor:pointer;border-radius:6px;
-                                                border:2px solid @(isSelected ? "#4caf50" : "rgba(255,255,255,.15)");
-                                                background:rgba(255,255,255,.06);padding:4px;
-                                                box-sizing:border-box">
-                                        <img src="@url" style="width:100%;height:100%;object-fit:contain" />
+                                    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;
+                                                padding:8px;background:rgba(255,255,255,.04);border-radius:4px;
+                                                font-size:0.85em;color:#aaa">
+                                        <span>目前：</span>
+                                        <EquipmentIconRenderer Equipment="@targetEq" />
+                                        <span>→</span>
+                                        <img src="@_selectedGalleryUrl"
+                                             style="width:1.5em;height:1.5em;object-fit:contain" />
+                                        <span>@targetEq.Name</span>
                                     </div>
                                 }
-                            </div>
+                            }
                         }
                     </RadzenCard>
+                }
 
-                    @if (!string.IsNullOrEmpty(_selectedGalleryUrl))
-                    {
-                        <RadzenCard>
-                            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-                                <img src="@_selectedGalleryUrl" alt="已選圖示"
-                                     style="width:48px;height:48px;object-fit:contain;flex-shrink:0;
-                                            background:rgba(255,255,255,.06);border-radius:4px;padding:4px;
-                                            border:2px solid #4caf50" />
-                                <RadzenText TextStyle="TextStyle.Subtitle1">套用到</RadzenText>
-                                <RadzenRadioButtonList @bind-Value="_assignToCategory"
-                                                       TValue="bool"
-                                                       Orientation="Orientation.Horizontal">
-                                    <Items>
-                                        <RadzenRadioButtonListItem Text="設備類別" Value="@true" />
-                                        <RadzenRadioButtonListItem Text="指定設備" Value="@false" />
-                                    </Items>
-                                </RadzenRadioButtonList>
-                            </div>
-                            @if (_assignToCategory)
-                            {
-                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                                    <RadzenDropDown @bind-Value="_assignCategoryName"
-                                                    Data="@_allCategories" TValue="string"
-                                                    Placeholder="選擇類別..."
-                                                    Style="flex:1;min-width:160px" />
-                                    <RadzenButton Text="套用到此類別" ButtonStyle="ButtonStyle.Success"
-                                                  Size="ButtonSize.Small"
-                                                  Disabled="@string.IsNullOrEmpty(_assignCategoryName)"
-                                                  Click="@AssignIconToCategory" />
-                                </div>
-                                @if (!string.IsNullOrEmpty(_assignCategoryName))
-                                {
-                                    var count = AllEquipment.Count(e => e.Category == _assignCategoryName);
-                                    <div style="margin-top:8px;font-size:0.82em;color:#aaa">
-                                        將套用到「@_assignCategoryName」類別共 @count 台設備
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                                    <RadzenDropDown @bind-Value="_assignTargetId"
-                                                    Data="@_equipmentDisplayItems"
-                                                    TextProperty="DisplayText" ValueProperty="Id"
-                                                    TValue="int"
-                                                    Placeholder="選擇設備..."
-                                                    Style="flex:1;min-width:200px" />
-                                    <RadzenButton Text="套用" ButtonStyle="ButtonStyle.Success"
-                                                  Size="ButtonSize.Small"
-                                                  Disabled="@(_assignTargetId == 0)"
-                                                  Click="@AssignIconToEquipment" />
-                                </div>
-                                @if (_assignTargetId > 0)
-                                {
-                                    var targetEq = AllEquipment.FirstOrDefault(e => e.Id == _assignTargetId);
-                                    if (targetEq != null)
-                                    {
-                                        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;
-                                                    padding:8px;background:rgba(255,255,255,.04);border-radius:4px;
-                                                    font-size:0.85em;color:#aaa">
-                                            <span>目前：</span>
-                                            <EquipmentIconRenderer Equipment="@targetEq" />
-                                            <span>→</span>
-                                            <img src="@_selectedGalleryUrl"
-                                                 style="width:1.5em;height:1.5em;object-fit:contain" />
-                                            <span>@targetEq.Name</span>
-                                        </div>
-                                    }
-                                }
-                            }
-                        </RadzenCard>
-                    }
-
-                </div>
             </RadzenTabsItem>
 
             <!-- ── 地圖管理 ─────────────────────────────────────────────── -->
@@ -378,38 +529,74 @@
                                 {
                                     <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
                                                           Property="Name" Title="名稱"
-                                                          Width="@_mapCols.Width("name")" MinWidth="80px" />
+                                                          Width="@_mapCols.Width("name")" MinWidth="80px">
+                                        <FilterTemplate Context="column">
+                                            <input type="text" value="@_filterMapName"
+                                                   @oninput="@((e) => { _filterMapName = e.Value?.ToString() ?? ""; _mapPage = 0; })"
+                                                   placeholder="搜尋名稱..." style="@ColFilterStyle" />
+                                        </FilterTemplate>
+                                    </RadzenDataGridColumn>
                                 }
                                 else if (colId == "version")
                                 {
                                     <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
                                                           Property="Version" Title="版本"
-                                                          Width="@_mapCols.Width("version")" MinWidth="60px" />
+                                                          Width="@_mapCols.Width("version")" MinWidth="60px">
+                                        <FilterTemplate Context="column">
+                                            <input type="text" value="@_filterMapVersion"
+                                                   @oninput="@((e) => { _filterMapVersion = e.Value?.ToString() ?? ""; _mapPage = 0; })"
+                                                   placeholder="搜尋版本..." style="@ColFilterStyle" />
+                                        </FilterTemplate>
+                                    </RadzenDataGridColumn>
                                 }
                                 else if (colId == "floor")
                                 {
                                     <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
                                                           Property="Floor" Title="樓層"
-                                                          Width="@_mapCols.Width("floor")" MinWidth="60px" />
+                                                          Width="@_mapCols.Width("floor")" MinWidth="60px">
+                                        <FilterTemplate Context="column">
+                                            <input type="text" value="@_filterMapFloor"
+                                                   @oninput="@((e) => { _filterMapFloor = e.Value?.ToString() ?? ""; _mapPage = 0; })"
+                                                   placeholder="搜尋樓層..." style="@ColFilterStyle" />
+                                        </FilterTemplate>
+                                    </RadzenDataGridColumn>
                                 }
                                 else if (colId == "area")
                                 {
                                     <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
                                                           Property="Area" Title="區域"
-                                                          Width="@_mapCols.Width("area")" MinWidth="60px" />
+                                                          Width="@_mapCols.Width("area")" MinWidth="60px">
+                                        <FilterTemplate Context="column">
+                                            <input type="text" value="@_filterMapArea"
+                                                   @oninput="@((e) => { _filterMapArea = e.Value?.ToString() ?? ""; _mapPage = 0; })"
+                                                   placeholder="搜尋區域..." style="@ColFilterStyle" />
+                                        </FilterTemplate>
+                                    </RadzenDataGridColumn>
                                 }
                                 else if (colId == "formatType")
                                 {
                                     <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
                                                           Property="FormatType" Title="格式"
-                                                          Width="@_mapCols.Width("formatType")" MinWidth="60px" />
+                                                          Width="@_mapCols.Width("formatType")" MinWidth="60px">
+                                        <FilterTemplate Context="column">
+                                            <input type="text" value="@_filterMapFormatType"
+                                                   @oninput="@((e) => { _filterMapFormatType = e.Value?.ToString() ?? ""; _mapPage = 0; })"
+                                                   placeholder="搜尋格式..." style="@ColFilterStyle" />
+                                        </FilterTemplate>
+                                    </RadzenDataGridColumn>
                                 }
                                 else if (colId == "createdAt")
                                 {
                                     <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
                                                           Property="CreatedAt" Title="建立時間"
                                                           FormatString="{0:yyyy-MM-dd}"
-                                                          Width="@_mapCols.Width("createdAt")" MinWidth="80px" />
+                                                          Width="@_mapCols.Width("createdAt")" MinWidth="80px">
+                                        <FilterTemplate Context="column">
+                                            <input type="text" value="@_filterMapCreatedAt"
+                                                   @oninput="@((e) => { _filterMapCreatedAt = e.Value?.ToString() ?? ""; _mapPage = 0; })"
+                                                   placeholder="搜尋建立時間..." style="@ColFilterStyle" />
+                                        </FilterTemplate>
+                                    </RadzenDataGridColumn>
                                 }
                                 else if (colId == "carousel")
                                 {
@@ -427,13 +614,25 @@
                                 {
                                     <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
                                                           Property="CarouselOrder" Title="次序"
-                                                          Width="@_mapCols.Width("carouselOrder")" MinWidth="50px" />
+                                                          Width="@_mapCols.Width("carouselOrder")" MinWidth="50px">
+                                        <FilterTemplate Context="column">
+                                            <input type="text" value="@_filterMapCarouselOrder"
+                                                   @oninput="@((e) => { _filterMapCarouselOrder = e.Value?.ToString() ?? ""; _mapPage = 0; })"
+                                                   placeholder="搜尋次序..." style="@ColFilterStyle" />
+                                        </FilterTemplate>
+                                    </RadzenDataGridColumn>
                                 }
                                 else if (colId == "carouselSecs")
                                 {
                                     <RadzenDataGridColumn @key="@colId" TItem="FactoryMap"
                                                           Property="CarouselSeconds" Title="時間(秒)"
-                                                          Width="@_mapCols.Width("carouselSecs")" MinWidth="60px" />
+                                                          Width="@_mapCols.Width("carouselSecs")" MinWidth="60px">
+                                        <FilterTemplate Context="column">
+                                            <input type="text" value="@_filterMapCarouselSecs"
+                                                   @oninput="@((e) => { _filterMapCarouselSecs = e.Value?.ToString() ?? ""; _mapPage = 0; })"
+                                                   placeholder="搜尋時間(秒)..." style="@ColFilterStyle" />
+                                        </FilterTemplate>
+                                    </RadzenDataGridColumn>
                                 }
                                 else if (colId == "actions")
                                 {
@@ -444,7 +643,7 @@
                                         <Template Context="m">
                                             <RadzenButton Text="編輯" Size="ButtonSize.ExtraSmall"
                                                           Click="@(() => EditMap(m))" />
-                                            <RadzenButton Text="取消" Size="ButtonSize.ExtraSmall"
+                                            <RadzenButton Text="刪除" Size="ButtonSize.ExtraSmall"
                                                           ButtonStyle="ButtonStyle.Danger"
                                                           Click="@(() => DeleteMap(m.Id))"
                                                           Style="margin-left:4px" />
@@ -495,6 +694,57 @@
     private string _equipSearch = "";
     private string _dsSearch    = "";
     private string _mapSearch   = "";
+    private string _iconSearch  = "";
+
+    // Per-column text filters — 圖示庫
+    private string _filterIconFileName = string.Empty;
+    private string _filterIconFormat   = string.Empty;
+    private string _filterIconUsedBy   = string.Empty;
+    private int    _iconPage           = 0;
+    private int    _iconPageSize       = 10;
+
+    private record IconFormatOption(string Label, string MimeType);
+    private static readonly List<IconFormatOption> IconFormatOptions = new()
+    {
+        new("PNG 圖片",   "image/png"),
+        new("JPG 圖片",   "image/jpeg"),
+        new("SVG 向量圖", "image/svg+xml"),
+    };
+    private IconFormatOption _iconFormat        = new("PNG 圖片", "image/png");
+    private string           _iconStatusMessage = string.Empty;
+    private bool             _iconIsError;
+
+    // Per-column text filters — 設備管理
+    private string _filterEquipName     = string.Empty;
+    private string _filterEquipCategory = string.Empty;
+    private string _filterEquipTag      = string.Empty;
+    private string _filterEquipMapName  = string.Empty;
+
+    // Per-column text filters — 資料來源
+    private string _filterDsName        = string.Empty;
+    private string _filterDsDataType    = string.Empty;
+    private string _filterDsSourceType  = string.Empty;
+    private string _filterDsQueryOrPath = string.Empty;
+
+    // Per-column text filters — 地圖管理 (string)
+    private string _filterMapName        = string.Empty;
+    private string _filterMapVersion     = string.Empty;
+    private string _filterMapFloor       = string.Empty;
+    private string _filterMapArea        = string.Empty;
+    private string _filterMapFormatType  = string.Empty;
+
+    // Per-column text filters — 地圖管理 (DateTime/int)
+    private string _filterMapCreatedAt     = string.Empty;
+    private string _filterMapCarouselOrder = string.Empty;
+    private string _filterMapCarouselSecs  = string.Empty;
+
+    private const string ColFilterStyle =
+        "width:100%;font-size:0.875rem;line-height:1.25rem;padding:0.25rem 0.5rem;" +
+        "box-sizing:border-box;outline:none;" +
+        "background:var(--rz-base-background-color,transparent);" +
+        "border:1px solid var(--rz-base-300,rgba(255,255,255,.2));" +
+        "color:var(--rz-text-color,#c8d8e8);" +
+        "border-radius:var(--rz-border-radius,4px)";
 
     // ── Pager state ─────────────────────────────────────────────────────────
     private int _equipPage = 0, _equipPageSize = 10;
@@ -504,6 +754,7 @@
     private string EquipSummary => GridPageSummary(_equipPage, _equipPageSize, FilteredEquipment.Count());
     private string DsSummary    => GridPageSummary(_dsPage,    _dsPageSize,    FilteredDataSources.Count());
     private string MapSummary   => GridPageSummary(_mapPage,   _mapPageSize,   FilteredMaps.Count());
+    private string IconSummary  => GridPageSummary(_iconPage,  _iconPageSize,  FilteredIcons.Count());
 
     private static string GridPageSummary(int page0, int size, int total)
     {
@@ -511,29 +762,127 @@
         return $"Page {page0 + 1} of {pages} ({total} Items)";
     }
 
-    private IEnumerable<Equipment> FilteredEquipment => string.IsNullOrWhiteSpace(_equipSearch)
-        ? AllEquipment
-        : AllEquipment.Where(e =>
-            (e.Name?.Contains(_equipSearch,     StringComparison.OrdinalIgnoreCase) == true) ||
-            (e.Tag?.Contains(_equipSearch,      StringComparison.OrdinalIgnoreCase) == true) ||
-            (e.Category?.Contains(_equipSearch, StringComparison.OrdinalIgnoreCase) == true) ||
-            (e.MapName?.Contains(_equipSearch,  StringComparison.OrdinalIgnoreCase) == true));
+    private IEnumerable<Equipment> FilteredEquipment
+    {
+        get
+        {
+            var q = AllEquipment.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_equipSearch))
+                q = q.Where(e =>
+                    (e.Name?.Contains(_equipSearch,     StringComparison.OrdinalIgnoreCase) == true) ||
+                    (e.Tag?.Contains(_equipSearch,      StringComparison.OrdinalIgnoreCase) == true) ||
+                    (e.Category?.Contains(_equipSearch, StringComparison.OrdinalIgnoreCase) == true) ||
+                    (e.MapName?.Contains(_equipSearch,  StringComparison.OrdinalIgnoreCase) == true));
+            if (!string.IsNullOrEmpty(_filterEquipName))
+                q = q.Where(e => e.Name?.Contains(_filterEquipName, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterEquipCategory))
+                q = q.Where(e => e.Category?.Contains(_filterEquipCategory, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterEquipTag))
+                q = q.Where(e => e.Tag?.Contains(_filterEquipTag, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterEquipMapName))
+                q = q.Where(e => e.MapName?.Contains(_filterEquipMapName, StringComparison.OrdinalIgnoreCase) == true);
+            return q;
+        }
+    }
 
-    private IEnumerable<DataSourceConfig> FilteredDataSources => string.IsNullOrWhiteSpace(_dsSearch)
-        ? AllDataSources
-        : AllDataSources.Where(d =>
-            (d.Name?.Contains(_dsSearch,        StringComparison.OrdinalIgnoreCase) == true) ||
-            (d.DataType?.Contains(_dsSearch,    StringComparison.OrdinalIgnoreCase) == true) ||
-            (d.QueryOrPath?.Contains(_dsSearch, StringComparison.OrdinalIgnoreCase) == true) ||
-            d.SourceType.ToString().Contains(_dsSearch, StringComparison.OrdinalIgnoreCase));
+    private IEnumerable<DataSourceConfig> FilteredDataSources
+    {
+        get
+        {
+            var q = AllDataSources.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_dsSearch))
+                q = q.Where(d =>
+                    (d.Name?.Contains(_dsSearch,        StringComparison.OrdinalIgnoreCase) == true) ||
+                    (d.DataType?.Contains(_dsSearch,    StringComparison.OrdinalIgnoreCase) == true) ||
+                    (d.QueryOrPath?.Contains(_dsSearch, StringComparison.OrdinalIgnoreCase) == true) ||
+                    d.SourceType.ToString().Contains(_dsSearch, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(_filterDsName))
+                q = q.Where(d => d.Name?.Contains(_filterDsName, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterDsDataType))
+                q = q.Where(d => d.DataType?.Contains(_filterDsDataType, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterDsSourceType))
+                q = q.Where(d => d.SourceType.ToString().Contains(_filterDsSourceType, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(_filterDsQueryOrPath))
+                q = q.Where(d => d.QueryOrPath?.Contains(_filterDsQueryOrPath, StringComparison.OrdinalIgnoreCase) == true);
+            return q;
+        }
+    }
 
-    private IEnumerable<FactoryMap> FilteredMaps => string.IsNullOrWhiteSpace(_mapSearch)
-        ? AllMaps
-        : AllMaps.Where(m =>
-            (m.Name?.Contains(_mapSearch,   StringComparison.OrdinalIgnoreCase) == true) ||
-            (m.Floor?.Contains(_mapSearch,  StringComparison.OrdinalIgnoreCase) == true) ||
-            (m.Area?.Contains(_mapSearch,   StringComparison.OrdinalIgnoreCase) == true));
+    private IEnumerable<FactoryMap> FilteredMaps
+    {
+        get
+        {
+            var q = AllMaps.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_mapSearch))
+                q = q.Where(m =>
+                    (m.Name?.Contains(_mapSearch,  StringComparison.OrdinalIgnoreCase) == true) ||
+                    (m.Floor?.Contains(_mapSearch, StringComparison.OrdinalIgnoreCase) == true) ||
+                    (m.Area?.Contains(_mapSearch,  StringComparison.OrdinalIgnoreCase) == true));
+            if (!string.IsNullOrEmpty(_filterMapName))
+                q = q.Where(m => m.Name?.Contains(_filterMapName, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterMapVersion))
+                q = q.Where(m => m.Version?.Contains(_filterMapVersion, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterMapFloor))
+                q = q.Where(m => m.Floor?.Contains(_filterMapFloor, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterMapArea))
+                q = q.Where(m => m.Area?.Contains(_filterMapArea, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterMapFormatType))
+                q = q.Where(m => m.FormatType.ToString().Contains(_filterMapFormatType, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(_filterMapCreatedAt))
+                q = q.Where(m => m.CreatedAt.ToString("yyyy-MM-dd")
+                                             .Contains(_filterMapCreatedAt, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(_filterMapCarouselOrder))
+                q = q.Where(m => m.CarouselOrder.ToString().Contains(_filterMapCarouselOrder));
+            if (!string.IsNullOrEmpty(_filterMapCarouselSecs))
+                q = q.Where(m => m.CarouselSeconds.ToString().Contains(_filterMapCarouselSecs));
+            return q;
+        }
+    }
     // ──────────────────────────────────────────────────────────────────────
+
+    private IEnumerable<string> FilteredIcons
+    {
+        get
+        {
+            var q = _allGalleryIcons.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_iconSearch))
+                q = q.Where(url => IconFileName(url).Contains(_iconSearch, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(_filterIconFileName))
+                q = q.Where(url => IconFileName(url).Contains(_filterIconFileName, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(_filterIconFormat))
+                q = q.Where(url => IconFormat(url).Contains(_filterIconFormat, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(_filterIconUsedBy))
+                q = q.Where(url => AllEquipment
+                    .Where(e => e.IconType == IconType.CustomImage && e.IconValue == url)
+                    .Any(e => e.Name?.Contains(_filterIconUsedBy, StringComparison.OrdinalIgnoreCase) == true));
+            return q;
+        }
+    }
+
+    private static string IconFileName(string url)
+    {
+        try { return Uri.UnescapeDataString(new Uri(url).Segments.Last()); }
+        catch
+        {
+            var i = url.LastIndexOf('/');
+            return i >= 0 ? url[(i + 1)..] : url;
+        }
+    }
+
+    private static string IconFormat(string url)
+    {
+        var name = IconFileName(url);
+        var dot  = name.LastIndexOf('.');
+        return dot >= 0 ? name[(dot + 1)..].ToUpperInvariant() : "—";
+    }
+
+    private static string FormatColor(string fmt) => fmt switch
+    {
+        "PNG"  => "#1976d2",
+        "JPG" or "JPEG" => "#388e3c",
+        "SVG"  => "#7b1fa2",
+        _      => "#607d8b",
+    };
 
     private IEnumerable<string> _allCategories => AllEquipment
         .Where(e => !string.IsNullOrEmpty(e.Category))
@@ -679,6 +1028,67 @@
         _assignCategoryName = string.Empty;
     }
 
+    private async Task DeleteGalleryIcon(string url)
+    {
+        var usingEquipment = AllEquipment
+            .Where(e => e.IconType == IconType.CustomImage && e.IconValue == url)
+            .ToList();
+        if (usingEquipment.Count > 0)
+        {
+            var names = string.Join("、", usingEquipment.Take(3).Select(e => e.Name))
+                        + (usingEquipment.Count > 3 ? $" 等共 {usingEquipment.Count} 台" : string.Empty);
+            await DialogSvc.Alert(
+                $"此圖示正在被設備「{names}」使用，無法刪除。\n請先在設備管理中更換這些設備的圖示，再執行刪除。",
+                "無法刪除圖示",
+                new AlertOptions { OkButtonText = "確定" });
+            return;
+        }
+        var confirmed = await DialogSvc.Confirm(
+            "確定要刪除此圖示嗎？此操作無法復原。",
+            "刪除圖示",
+            new ConfirmOptions { OkButtonText = "刪除", CancelButtonText = "取消" });
+        if (confirmed != true) return;
+        try
+        {
+            await GallerySvc.DeleteAsync(url);
+            try { await AuditSvc.LogDeleteAsync("圖示", 0, $"gallery:{url[..Math.Min(40, url.Length)]}...", CurrentUser.GetCurrentUser()); } catch { }
+            if (_selectedGalleryUrl == url) _selectedGalleryUrl = string.Empty;
+            await RefreshGallery();
+            NotifySvc.Notify(NotificationSeverity.Success, "圖示已刪除");
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "刪除圖示失敗", ex.Message);
+        }
+    }
+
+    private async Task EditGalleryIcon(string url)
+    {
+        var newUrl = await DialogSvc.OpenAsync<IconReplaceDialog>(
+            "替換圖示",
+            new Dictionary<string, object> { { "OldIconUrl", url } },
+            new DialogOptions { Width = "420px", CloseDialogOnOverlayClick = false, Draggable = true });
+        if (newUrl is not string replacement || string.IsNullOrEmpty(replacement)) return;
+        try
+        {
+            await GallerySvc.UpdateAsync(url, replacement);
+            foreach (var eq in AllEquipment.Where(e => e.IconType == IconType.CustomImage && e.IconValue == url))
+            {
+                eq.IconValue = replacement;
+                await EquipmentSvc.UpdateEquipmentAsync(eq);
+            }
+            AllEquipment = (await EquipmentSvc.GetAllEquipmentAsync()).ToList();
+            await (_equipGrid?.Reload() ?? Task.CompletedTask);
+            if (_selectedGalleryUrl == url) _selectedGalleryUrl = replacement;
+            await RefreshGallery();
+            NotifySvc.Notify(NotificationSeverity.Success, "圖示已替換");
+        }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "替換圖示失敗", ex.Message);
+        }
+    }
+
     private async Task AssignIconToCategory()
     {
         if (string.IsNullOrEmpty(_assignCategoryName) || string.IsNullOrEmpty(_selectedGalleryUrl)) return;
@@ -736,6 +1146,7 @@
         {
             AllEquipment = (await EquipmentSvc.GetAllEquipmentAsync()).ToList();
             await (_equipGrid?.Reload() ?? Task.CompletedTask);
+            await RefreshGallery();
         }
     }
 
@@ -763,18 +1174,41 @@
     private async Task DeleteEquipment(int id)
     {
         var eq = AllEquipment.FirstOrDefault(e => e.Id == id);
+        var name = eq?.Name ?? id.ToString();
+
+        bool inUse;
+        try { inUse = await EquipmentSvc.IsEquipmentInUseAsync(id); }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "無法驗證設備狀態", ex.Message);
+            return;
+        }
+
+        if (inUse)
+        {
+            NotifySvc.Notify(NotificationSeverity.Warning, "無法刪除設備",
+                $"「{name}」已配置在看板地圖上，請先移除版面上的 Widget 再刪除。");
+            await DialogSvc.Alert(
+                $"設備「{name}」已配置在看板地圖上，無法刪除。\n請先從地圖版面中移除該設備的 Widget，再執行刪除。",
+                "無法刪除設備",
+                new AlertOptions { OkButtonText = "確定" });
+            return;
+        }
+
         var confirmed = await DialogSvc.Confirm(
-            $"確定要刪除設備「{eq?.Name ?? id.ToString()}」嗎？此操作無法復原。",
+            $"確定要刪除設備「{name}」嗎？此操作無法復原。",
             "刪除設備",
-            new ConfirmOptions { OkButtonText = "刪除", CancelButtonText = "取消",
-});
+            new ConfirmOptions { OkButtonText = "刪除", CancelButtonText = "取消" });
         if (confirmed != true) return;
+
         try
         {
             await EquipmentSvc.DeleteEquipmentAsync(id);
+            try { await AuditSvc.LogDeleteAsync("設備", id, name, CurrentUser.GetCurrentUser()); } catch { }
             AllEquipment.RemoveAll(e => e.Id == id);
             await (_equipGrid?.Reload() ?? Task.CompletedTask);
-            NotifySvc.Notify(NotificationSeverity.Success, "設備已刪除", eq?.Name ?? string.Empty);
+            await RefreshGallery();
+            NotifySvc.Notify(NotificationSeverity.Success, "設備已刪除", name);
         }
         catch (Exception ex)
         {
@@ -804,19 +1238,41 @@
 
     private async Task DeleteDataSource(int id)
     {
-        var ds = AllDataSources.FirstOrDefault(d => d.Id == id);
+        var ds   = AllDataSources.FirstOrDefault(d => d.Id == id);
+        var name = ds?.Name ?? id.ToString();
+
+        bool inUse;
+        try { inUse = await EquipmentSvc.IsDataSourceInUseAsync(id); }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "無法驗證資料來源狀態", ex.Message);
+            return;
+        }
+
+        if (inUse)
+        {
+            NotifySvc.Notify(NotificationSeverity.Warning, "無法刪除資料來源",
+                $"「{name}」已被 Widget 元件引用，請先移除引用後再刪除。");
+            await DialogSvc.Alert(
+                $"資料來源「{name}」已被看板 Widget 元件引用，無法刪除。\n請先移除引用此資料來源的 Widget 元件，再執行刪除。",
+                "無法刪除資料來源",
+                new AlertOptions { OkButtonText = "確定" });
+            return;
+        }
+
         var confirmed = await DialogSvc.Confirm(
-            $"確定要刪除資料來源「{ds?.Name ?? id.ToString()}」嗎？此操作無法復原。",
+            $"確定要刪除資料來源「{name}」嗎？此操作無法復原。",
             "刪除資料來源",
-            new ConfirmOptions { OkButtonText = "刪除", CancelButtonText = "取消",
-});
+            new ConfirmOptions { OkButtonText = "刪除", CancelButtonText = "取消" });
         if (confirmed != true) return;
+
         try
         {
             await EquipmentSvc.DeleteDataSourceConfigAsync(id);
+            try { await AuditSvc.LogDeleteAsync("資料來源", id, name, CurrentUser.GetCurrentUser()); } catch { }
             AllDataSources.RemoveAll(d => d.Id == id);
             await (_dsGrid?.Reload() ?? Task.CompletedTask);
-            NotifySvc.Notify(NotificationSeverity.Success, "資料來源已刪除", ds?.Name ?? string.Empty);
+            NotifySvc.Notify(NotificationSeverity.Success, "資料來源已刪除", name);
         }
         catch (Exception ex)
         {
@@ -826,36 +1282,40 @@
 
     private async Task OnIconFileSelected(InputFileChangeEventArgs args)
     {
-        var file         = args.File;
-        _iconFileBytes   = null;
-        _iconFileName    = string.Empty;
-        _localPreviewUrl = string.Empty;
-        _assignTargetId  = 0;
+        _iconFileBytes     = null;
+        _iconFileName      = string.Empty;
+        _localPreviewUrl   = string.Empty;
+        _assignTargetId    = 0;
+        _iconStatusMessage = string.Empty;
         try
         {
+            var file = args.File;
             // Read immediately — IBrowserFile JS ref becomes invalid after re-render
             await using var src = file.OpenReadStream(maxAllowedSize: ModuleOpts.Value.IconUploadMaxBytes);
             using var ms        = new MemoryStream();
             await src.CopyToAsync(ms);
             _iconFileBytes   = ms.ToArray();
             _iconFileName    = file.Name;
-            var mime         = file.ContentType ?? "image/png";
-            _localPreviewUrl = $"data:{mime};base64,{Convert.ToBase64String(_iconFileBytes)}";
+            _localPreviewUrl = $"data:{_iconFormat.MimeType};base64,{Convert.ToBase64String(_iconFileBytes)}";
         }
         catch (Exception ex)
         {
-            NotifySvc.Notify(NotificationSeverity.Error, "讀取圖示失敗", ex.Message);
+            _iconIsError       = true;
+            _iconStatusMessage = $"❌ 讀取圖示失敗：{ex.Message}";
         }
     }
 
     private async Task DoIconUpload()
     {
         if (_iconFileBytes == null || string.IsNullOrEmpty(_iconFileName)) return;
+        _iconIsError       = false;
+        _iconStatusMessage = "上傳中...";
         try
         {
             using var stream    = new MemoryStream(_iconFileBytes);
             var url             = await IconSvc.UploadAsync(stream, _iconFileName);
             await GallerySvc.AddAsync(url);
+            _iconStatusMessage  = $"✅ 已匯入：{_iconFileName}";
             _localPreviewUrl    = string.Empty;
             _iconFileBytes      = null;
             _iconFileName       = string.Empty;
@@ -867,6 +1327,8 @@
         }
         catch (Exception ex)
         {
+            _iconIsError       = true;
+            _iconStatusMessage = $"❌ 上傳失敗：{ex.Message}";
             NotifySvc.Notify(NotificationSeverity.Error, "上傳圖示失敗", ex.Message);
         }
     }
@@ -910,18 +1372,40 @@
 
     private async Task DeleteMap(int id)
     {
-        var map = AllMaps.FirstOrDefault(m => m.Id == id);
+        var map  = AllMaps.FirstOrDefault(m => m.Id == id);
+        var name = map?.Name ?? id.ToString();
+
+        bool hasVersions;
+        try { hasVersions = await MapImportSvc.HasLayoutVersionsAsync(id); }
+        catch (Exception ex)
+        {
+            NotifySvc.Notify(NotificationSeverity.Error, "無法驗證地圖狀態", ex.Message);
+            return;
+        }
+
+        if (hasVersions)
+        {
+            NotifySvc.Notify(NotificationSeverity.Warning, "無法刪除地圖",
+                $"「{name}」已有版面配置版本，請先清除所有版面版本再刪除。");
+            await DialogSvc.Alert(
+                $"地圖「{name}」已有版面配置版本，無法刪除。\n請先清除該地圖的所有版面版本，再執行刪除。",
+                "無法刪除地圖",
+                new AlertOptions { OkButtonText = "確定" });
+            return;
+        }
+
         var confirmed = await DialogSvc.Confirm(
-            $"確定要刪除地圖「{map?.Name ?? id.ToString()}」嗎？\n相關的版面版本與 Widget 設定將一併刪除，此操作無法復原。",
+            $"確定要刪除地圖「{name}」嗎？此操作無法復原。",
             "刪除地圖",
-            new ConfirmOptions { OkButtonText = "刪除", CancelButtonText = "取消",
-});
+            new ConfirmOptions { OkButtonText = "刪除", CancelButtonText = "取消" });
         if (confirmed != true) return;
+
         try
         {
             await MapImportSvc.DeleteAsync(id);
+            try { await AuditSvc.LogDeleteAsync("地圖", id, name, CurrentUser.GetCurrentUser()); } catch { }
             AllMaps.RemoveAll(m => m.Id == id);
-            NotifySvc.Notify(NotificationSeverity.Success, "地圖已刪除", map?.Name ?? string.Empty);
+            NotifySvc.Notify(NotificationSeverity.Success, "地圖已刪除", name);
         }
         catch (Exception ex)
         {

@@ -68,9 +68,21 @@
                                         class="kanban-light-grid">
                             <Columns>
                                 <RadzenDataGridColumn TItem="KeyValuePair<string,object?>"
-                                                      Property="Key" Title="參數" Width="120px" />
+                                                      Property="Key" Title="參數" Width="120px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterFieldKey"
+                                               @oninput="@((e) => { _filterFieldKey = e.Value?.ToString() ?? ""; _fieldPage = 0; })"
+                                               placeholder="搜尋參數..." style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
                                 <RadzenDataGridColumn TItem="KeyValuePair<string,object?>"
-                                                      Property="Value" Title="數值" />
+                                                      Property="Value" Title="數值">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterFieldValue"
+                                               @oninput="@((e) => { _filterFieldValue = e.Value?.ToString() ?? ""; _fieldPage = 0; })"
+                                               placeholder="搜尋數值..." style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
                             </Columns>
                         </RadzenDataGrid>
                     }
@@ -115,8 +127,15 @@
                                         <Columns>
                                             @foreach (var key in rows.First().Fields.Keys.Take(ModuleOpts.Value.TabDataColumnsMaxCount))
                                             {
-                                                <RadzenDataGridColumn TItem="DataResult" Title="@key"
-                                                    Property="@($"Fields[\"{key}\"]")" />
+                                                var colKey = key;
+                                                <RadzenDataGridColumn TItem="DataResult" Title="@colKey"
+                                                    Property="@($"Fields[\"{colKey}\"]")">
+                                                    <FilterTemplate Context="column">
+                                                        <input type="text" value="@GetTabColFilter(linkConfig.Id, colKey)"
+                                                               @oninput="@((e) => SetTabColFilter(linkConfig.Id, colKey, e.Value?.ToString() ?? ""))"
+                                                               placeholder="搜尋@(colKey)..." style="@ColFilterStyle" />
+                                                    </FilterTemplate>
+                                                </RadzenDataGridColumn>
                                             }
                                         </Columns>
                                     </RadzenDataGrid>
@@ -168,12 +187,23 @@
 
     private Dictionary<int, List<DataResult>> TabData = new();
     private List<TrendPoint> ChartPoints = new();
-    private string _fieldSearch   = "";
-    private int    _fieldPage     = 0;
-    private int    _fieldPageSize = 10;
-    private Dictionary<int, string> _tabSearch    = new();
-    private Dictionary<int, int>    _tabPage      = new();
-    private Dictionary<int, int>    _tabPageSize  = new();
+    private string _fieldSearch      = "";
+    private string _filterFieldKey   = "";
+    private string _filterFieldValue = "";
+    private int    _fieldPage        = 0;
+    private int    _fieldPageSize    = 10;
+    private Dictionary<int, string>             _tabSearch    = new();
+    private Dictionary<int, int>                _tabPage      = new();
+    private Dictionary<int, int>                _tabPageSize  = new();
+    private Dictionary<int, Dictionary<string, string>> _tabColFilters = new();
+
+    private const string ColFilterStyle =
+        "width:100%;font-size:0.875rem;line-height:1.25rem;padding:0.25rem 0.5rem;" +
+        "box-sizing:border-box;outline:none;" +
+        "background:var(--rz-base-background-color,transparent);" +
+        "border:1px solid var(--rz-base-300,rgba(255,255,255,.2));" +
+        "color:var(--rz-text-color,#c8d8e8);" +
+        "border-radius:var(--rz-border-radius,4px)";
 
     private string FieldPageSummary
     {
@@ -197,13 +227,21 @@
 
     public record TrendPoint(string Label, double Value);
 
-    private IEnumerable<KeyValuePair<string, object?>> FilteredFields =>
-        LatestData?.Fields is null
-            ? Enumerable.Empty<KeyValuePair<string, object?>>()
-            : string.IsNullOrWhiteSpace(_fieldSearch)
-                ? LatestData.Fields
-                : LatestData.Fields.Where(kv =>
-                    kv.Key.Contains(_fieldSearch, StringComparison.OrdinalIgnoreCase));
+    private IEnumerable<KeyValuePair<string, object?>> FilteredFields
+    {
+        get
+        {
+            if (LatestData?.Fields is null) return Enumerable.Empty<KeyValuePair<string, object?>>();
+            var q = LatestData.Fields.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(_fieldSearch))
+                q = q.Where(kv => kv.Key.Contains(_fieldSearch, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(_filterFieldKey))
+                q = q.Where(kv => kv.Key.Contains(_filterFieldKey, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(_filterFieldValue))
+                q = q.Where(kv => kv.Value?.ToString()?.Contains(_filterFieldValue, StringComparison.OrdinalIgnoreCase) == true);
+            return q;
+        }
+    }
 
     private string TabSearch(int id) =>
         _tabSearch.TryGetValue(id, out var s) ? s : "";
@@ -211,12 +249,30 @@
     private void SetTabSearch(int id, string val) =>
         _tabSearch[id] = val;
 
+    private string GetTabColFilter(int tabId, string col) =>
+        _tabColFilters.TryGetValue(tabId, out var cols) && cols.TryGetValue(col, out var v) ? v : "";
+
+    private void SetTabColFilter(int tabId, string col, string val)
+    {
+        if (!_tabColFilters.ContainsKey(tabId)) _tabColFilters[tabId] = new();
+        _tabColFilters[tabId][col] = val;
+        _tabPage[tabId] = 0;
+    }
+
     private IEnumerable<DataResult> FilteredTabRows(int id, List<DataResult> rows)
     {
+        var q = rows.AsEnumerable();
         var term = TabSearch(id);
-        if (string.IsNullOrWhiteSpace(term)) return rows;
-        return rows.Where(r => r.Fields.Values.Any(v =>
-            v?.ToString()?.Contains(term, StringComparison.OrdinalIgnoreCase) == true));
+        if (!string.IsNullOrWhiteSpace(term))
+            q = q.Where(r => r.Fields.Values.Any(v =>
+                v?.ToString()?.Contains(term, StringComparison.OrdinalIgnoreCase) == true));
+        if (_tabColFilters.TryGetValue(id, out var colFilters))
+        {
+            foreach (var (col, filter) in colFilters.Where(kv => !string.IsNullOrEmpty(kv.Value)))
+                q = q.Where(r => r.Fields.TryGetValue(col, out var v) &&
+                                  v?.ToString()?.Contains(filter, StringComparison.OrdinalIgnoreCase) == true);
+        }
+        return q;
     }
 
     // W-5: allow only safe URL schemes — javascript: and data: URIs must be rejected
@@ -231,11 +287,14 @@
     {
         if (!IsOpen || EquipmentData == null) return;
 
-        _fieldSearch = "";
-        _fieldPage   = 0;
+        _fieldSearch      = "";
+        _filterFieldKey   = "";
+        _filterFieldValue = "";
+        _fieldPage        = 0;
         _tabSearch.Clear();
         _tabPage.Clear();
         _tabPageSize.Clear();
+        _tabColFilters.Clear();
         TabData.Clear();
         var allConfigs = (await EquipmentSvc.GetAllDataSourceConfigsAsync())
                              .ToDictionary(c => c.Id);

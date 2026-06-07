@@ -146,4 +146,10 @@ public class DemoEquipmentService : IEquipmentService
         _dataSources.RemoveAll(c => c.Id == id);
         return Task.CompletedTask;
     }
+
+    public Task<bool> IsEquipmentInUseAsync(int equipmentId) =>
+        Task.FromResult(_widgets.Any(w => w.EquipmentId == equipmentId));
+
+    public Task<bool> IsDataSourceInUseAsync(int dataSourceConfigId) =>
+        Task.FromResult(false);
 }

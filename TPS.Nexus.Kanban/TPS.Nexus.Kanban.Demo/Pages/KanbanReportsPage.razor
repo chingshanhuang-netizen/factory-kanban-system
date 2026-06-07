@@ -1,0 +1,551 @@
+@page "/kanban/reports"
+@using TPS.Nexus.Kanban.Core.Constants
+@using TPS.Nexus.Kanban.Core.Interfaces
+@using TPS.Nexus.Kanban.Core.Models
+@using TPS.Nexus.Kanban.Web.Services
+@using TPS.Nexus.Kanban.Web.Components.Settings
+@using Microsoft.JSInterop
+@using System.Text.Json
+@using Radzen
+@using Radzen.Blazor
+@inject IAuditLogService AuditSvc
+@inject IFunctionPermissionService PermSvc
+@inject UserPrefsService UserPrefs
+@inject IJSRuntime JS
+
+<PageTitle>看板報表</PageTitle>
+
+@if (!_canView)
+{
+    <div style="padding:40px;text-align:center;color:#f44336">無查看權限（需要 @KanbanPermissions.View）</div>
+    return;
+}
+
+<div style="padding:16px">
+    <RadzenText TextStyle="TextStyle.H5">看板報表</RadzenText>
+
+    <RadzenTabs>
+        <Tabs>
+            <RadzenTabsItem Text="刪除操作紀錄">
+
+                <!-- ── 工具列 ───────────────────────────────────────────── -->
+                <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <!-- 左側：日期起訖 + 類型多選 -->
+                    <span style="color:#aaa;font-size:0.83em">從</span>
+                    <RadzenDatePicker Value="_dateFrom"
+                                     ValueChanged="@((DateTime? v) => OnDateFromChanged(v))"
+                                     DateFormat="yyyy-MM-dd"
+                                     ShowTime="false" AllowClear="true"
+                                     Placeholder="開始日期"
+                                     Style="width:130px;font-size:0.85em" />
+                    <span style="color:#aaa;font-size:0.83em">至</span>
+                    <RadzenDatePicker Value="_dateTo"
+                                     ValueChanged="@((DateTime? v) => OnDateToChanged(v))"
+                                     DateFormat="yyyy-MM-dd"
+                                     ShowTime="false" AllowClear="true"
+                                     Placeholder="結束日期"
+                                     Style="width:130px;font-size:0.85em" />
+                    <RadzenDropDown Value="_selectedTypes"
+                                   ValueChanged="@((IEnumerable<string> v) => OnTypesChanged(v))"
+                                   Data="@AvailableTypes"
+                                   Multiple="true"
+                                   Placeholder="全部類型"
+                                   AllowClear="true"
+                                   Style="width:150px;font-size:0.85em"
+                                   TValue="IEnumerable<string>" />
+
+                    <!-- 彈性間距 -->
+                    <span style="flex:1"></span>
+
+                    <!-- 右側：重新整理、欄位設定、分隔線、全文搜尋 -->
+                    <RadzenButton Text="重新整理" Icon="refresh" ButtonStyle="ButtonStyle.Secondary"
+                                  Size="ButtonSize.Small" Click="@LoadLogs" />
+                    <RadzenButton Icon="settings" Text="欄位設定"
+                                  ButtonStyle="@(_showCols ? ButtonStyle.Info : ButtonStyle.Light)"
+                                  Size="ButtonSize.Small"
+                                  Click="@(() => _showCols = !_showCols)" />
+                    <span style="border-left:1px solid rgba(255,255,255,.18);height:22px;align-self:center"></span>
+                    <input type="text" value="@_search"
+                           @oninput="OnSearchChanged"
+                           placeholder="🔍 搜尋名稱/執行者..."
+                           style="font-size:0.875rem;line-height:1.25rem;
+                                  padding:0.25rem 0.75rem;min-height:1.75rem;
+                                  box-sizing:border-box;
+                                  background:rgba(255,255,255,.07);
+                                  border:1px solid rgba(255,255,255,.2);
+                                  color:var(--rz-text-color,#c8d8e8);
+                                  border-radius:var(--rz-border-radius,4px);
+                                  outline:none;width:180px" />
+                </div>
+
+                <!-- ── 欄位設定面板 ──────────────────────────────────────── -->
+                @if (_showCols)
+                {
+                    <ColumnSettingsPanel Prefs="@_auditCols"
+                                        OnReordered="@(() => _gridKey++)" />
+                }
+
+                <!-- ── 篩選條件標籤列 ────────────────────────────────────── -->
+                @if (HasActiveFilter)
+                {
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+                                margin-bottom:8px;padding:6px 10px;
+                                background:rgba(255,255,255,.04);border-radius:6px;
+                                border:1px solid rgba(255,255,255,.1)">
+                        <span style="color:#888;font-size:0.82em;margin-right:2px">篩選：</span>
+
+                        @if (_dateFrom.HasValue)
+                        {
+                            <span style="@ChipStyle("#1a3a5c")">
+                                從 @_dateFrom.Value.ToString("yyyy-MM-dd")
+                                <button @onclick="@(async () => { _dateFrom = null; _page = 0; await SaveFiltersAsync(); })"
+                                        style="@CloseBtn">×</button>
+                            </span>
+                        }
+                        @if (_dateTo.HasValue)
+                        {
+                            <span style="@ChipStyle("#1a3a5c")">
+                                至 @_dateTo.Value.ToString("yyyy-MM-dd")
+                                <button @onclick="@(async () => { _dateTo = null; _page = 0; await SaveFiltersAsync(); })"
+                                        style="@CloseBtn">×</button>
+                            </span>
+                        }
+                        @foreach (var t in _selectedTypes)
+                        {
+                            var type = t;
+                            <span style="@ChipStyle(TypeColor(type))">
+                                @type
+                                <button @onclick="@(async () => { _selectedTypes.Remove(type); _page = 0; await SaveFiltersAsync(); })"
+                                        style="@CloseBtn">×</button>
+                            </span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_search))
+                        {
+                            <span style="@ChipStyle("#37474f")">
+                                🔍 @_search
+                                <button @onclick="@(async () => { _search = ""; _page = 0; await SaveFiltersAsync(); })"
+                                        style="@CloseBtn">×</button>
+                            </span>
+                        }
+
+                        <RadzenButton Text="清除全部" ButtonStyle="ButtonStyle.Light"
+                                      Size="ButtonSize.ExtraSmall"
+                                      Click="@ClearAllFilters" />
+                    </div>
+                }
+
+                <!-- ── DataGrid ─────────────────────────────────────────── -->
+                <RadzenDataGrid @key="@_gridKey" Data="@FilteredLogs" TItem="AuditLog"
+                                AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.Simple"
+                                AllowPaging="true" PageSize="@_pageSize"
+                                PageSizeOptions="@(new int[]{10,20,50,100})"
+                                Page="@((args) => _page = args.PageIndex)"
+                                PageSizeChanged="@((size) => { _pageSize = size; _page = 0; })"
+                                ShowPagingSummary="true" PagingSummaryFormat="@Summary"
+                                AllowColumnResize="true" class="kanban-light-grid"
+                                Style="height: calc(100vh - 242px)"
+                                ColumnResized="@OnColResized">
+                    <Columns>
+                        @foreach (var colId in _auditCols.Order)
+                        {
+                            if (colId == "performedAt")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="AuditLog"
+                                                      Property="PerformedAt" Title="時間"
+                                                      Width="@_auditCols.Width("performedAt")" MinWidth="120px"
+                                                      FormatString="{0:yyyy-MM-dd HH:mm:ss}">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterPerformedAt"
+                                               @oninput="@((e) => { _filterPerformedAt = e.Value?.ToString() ?? ""; _page = 0; })"
+                                               placeholder="搜尋時間..."
+                                               style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
+                            }
+                            else if (colId == "entityType")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="AuditLog"
+                                                      Property="EntityType" Title="類型"
+                                                      Width="@_auditCols.Width("entityType")" MinWidth="70px">
+                                    <Template Context="log">
+                                        <span style="padding:2px 8px;border-radius:12px;font-size:0.82em;
+                                                     background:@TypeColor(log.EntityType);color:#fff">
+                                            @log.EntityType
+                                        </span>
+                                    </Template>
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterEntityType"
+                                               @oninput="@((e) => { _filterEntityType = e.Value?.ToString() ?? ""; _page = 0; })"
+                                               placeholder="搜尋類型..."
+                                               style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
+                            }
+                            else if (colId == "entityId")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="AuditLog"
+                                                      Property="EntityId" Title="ID"
+                                                      Width="@_auditCols.Width("entityId")" MinWidth="50px">
+                                    <Template Context="log">
+                                        <span style="color:#888;font-size:0.85em">
+                                            @(log.EntityId > 0 ? log.EntityId.ToString() : "—")
+                                        </span>
+                                    </Template>
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterEntityId"
+                                               @oninput="@((e) => { _filterEntityId = e.Value?.ToString() ?? ""; _page = 0; })"
+                                               placeholder="搜尋 ID..."
+                                               style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
+                            }
+                            else if (colId == "entityName")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="AuditLog"
+                                                      Property="EntityName" Title="對象名稱"
+                                                      Width="@_auditCols.Width("entityName")" MinWidth="100px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterEntityName"
+                                               @oninput="@((e) => { _filterEntityName = e.Value?.ToString() ?? ""; _page = 0; })"
+                                               placeholder="搜尋對象名稱..."
+                                               style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
+                            }
+                            else if (colId == "action")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="AuditLog"
+                                                      Property="Action" Title="操作"
+                                                      Width="@_auditCols.Width("action")" MinWidth="60px">
+                                    <Template Context="log">
+                                        <span style="color:#f44336;font-weight:600;font-size:0.85em">
+                                            @log.Action
+                                        </span>
+                                    </Template>
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterAction"
+                                               @oninput="@((e) => { _filterAction = e.Value?.ToString() ?? ""; _page = 0; })"
+                                               placeholder="搜尋操作..."
+                                               style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
+                            }
+                            else if (colId == "performedBy")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="AuditLog"
+                                                      Property="PerformedBy" Title="執行者"
+                                                      Width="@_auditCols.Width("performedBy")" MinWidth="80px">
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterPerformedBy"
+                                               @oninput="@((e) => { _filterPerformedBy = e.Value?.ToString() ?? ""; _page = 0; })"
+                                               placeholder="搜尋執行者..."
+                                               style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
+                            }
+                            else if (colId == "details")
+                            {
+                                <RadzenDataGridColumn @key="@colId" TItem="AuditLog"
+                                                      Property="Details" Title="備註"
+                                                      Width="@_auditCols.Width("details")" MinWidth="80px">
+                                    <Template Context="log">
+                                        <span style="color:#888;font-size:0.82em">@(log.Details ?? "—")</span>
+                                    </Template>
+                                    <FilterTemplate Context="column">
+                                        <input type="text" value="@_filterDetails"
+                                               @oninput="@((e) => { _filterDetails = e.Value?.ToString() ?? ""; _page = 0; })"
+                                               placeholder="搜尋備註..."
+                                               style="@ColFilterStyle" />
+                                    </FilterTemplate>
+                                </RadzenDataGridColumn>
+                            }
+                        }
+                    </Columns>
+                </RadzenDataGrid>
+
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</div>
+
+@code {
+    // ── State ────────────────────────────────────────────────────────────
+    private bool           _canView;
+    private List<AuditLog> _logs       = new();
+    private string         _search     = string.Empty;
+    private int            _page       = 0;
+    private int            _pageSize   = 10;
+    private int            _gridKey;
+    private bool           _showCols;
+    private bool           _prefsLoaded;
+
+    // Toolbar filters
+    private DateTime?     _dateFrom;
+    private DateTime?     _dateTo;
+    private List<string>  _selectedTypes = new();
+
+    // Per-column text filters
+    private string _filterPerformedAt = string.Empty;
+    private string _filterEntityType  = string.Empty;
+    private string _filterEntityId    = string.Empty;
+    private string _filterEntityName  = string.Empty;
+    private string _filterAction      = string.Empty;
+    private string _filterPerformedBy = string.Empty;
+    private string _filterDetails     = string.Empty;
+
+    // Column prefs — null! initialised in OnInitializedAsync
+    private GridColumnPrefs _auditCols = null!;
+
+    // ── Computed ──────────────────────────────────────────────────────────
+    private string Summary => GridPageSummary(_page, _pageSize, FilteredLogs.Count());
+
+    private bool HasActiveFilter =>
+        _dateFrom.HasValue || _dateTo.HasValue ||
+        _selectedTypes.Count > 0 || !string.IsNullOrWhiteSpace(_search);
+
+    // 根據目前日期區間動態產生可選類型（日期改變時自動更新）
+    private IReadOnlyList<string> AvailableTypes
+    {
+        get
+        {
+            var q = _logs.AsEnumerable();
+            if (_dateFrom.HasValue)
+                q = q.Where(l => l.PerformedAt >= _dateFrom.Value.Date);
+            if (_dateTo.HasValue)
+                q = q.Where(l => l.PerformedAt < _dateTo.Value.Date.AddDays(1));
+            return q.Select(l => l.EntityType)
+                    .Where(t => !string.IsNullOrEmpty(t))
+                    .Distinct()
+                    .Order()
+                    .ToList();
+        }
+    }
+
+    private IEnumerable<AuditLog> FilteredLogs
+    {
+        get
+        {
+            var q = _logs.AsEnumerable();
+            // Toolbar filters
+            if (_dateFrom.HasValue)
+                q = q.Where(l => l.PerformedAt >= _dateFrom.Value.Date);
+            if (_dateTo.HasValue)
+                q = q.Where(l => l.PerformedAt < _dateTo.Value.Date.AddDays(1));
+            if (_selectedTypes.Count > 0)
+                q = q.Where(l => _selectedTypes.Contains(l.EntityType));
+            if (!string.IsNullOrWhiteSpace(_search))
+                q = q.Where(l =>
+                    (l.EntityName?.Contains(_search,  StringComparison.OrdinalIgnoreCase) == true) ||
+                    (l.PerformedBy?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true) ||
+                    (l.EntityType?.Contains(_search,  StringComparison.OrdinalIgnoreCase) == true) ||
+                    (l.Action?.Contains(_search,      StringComparison.OrdinalIgnoreCase) == true));
+            // Per-column text filters
+            if (!string.IsNullOrEmpty(_filterPerformedAt))
+                q = q.Where(l => l.PerformedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                                               .Contains(_filterPerformedAt, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(_filterEntityType))
+                q = q.Where(l => l.EntityType?.Contains(_filterEntityType, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterEntityId))
+                q = q.Where(l => l.EntityId.ToString().Contains(_filterEntityId));
+            if (!string.IsNullOrEmpty(_filterEntityName))
+                q = q.Where(l => l.EntityName?.Contains(_filterEntityName, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterAction))
+                q = q.Where(l => l.Action?.Contains(_filterAction, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterPerformedBy))
+                q = q.Where(l => l.PerformedBy?.Contains(_filterPerformedBy, StringComparison.OrdinalIgnoreCase) == true);
+            if (!string.IsNullOrEmpty(_filterDetails))
+                q = q.Where(l => l.Details?.Contains(_filterDetails, StringComparison.OrdinalIgnoreCase) == true);
+            return q;
+        }
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        _canView = await PermSvc.HasPermissionAsync(KanbanPermissions.View);
+        if (!_canView) return;
+
+        _dateFrom = DateTime.Today;
+        _dateTo   = DateTime.Today;
+
+        _auditCols = new("audit-log", new[]
+        {
+            new GridColumnPrefs.ColDef("performedAt", "時間",    165),
+            new GridColumnPrefs.ColDef("entityType",  "類型",     90),
+            new GridColumnPrefs.ColDef("entityId",    "ID",       60),
+            new GridColumnPrefs.ColDef("entityName",  "對象名稱"),
+            new GridColumnPrefs.ColDef("action",      "操作",     80),
+            new GridColumnPrefs.ColDef("performedBy", "執行者",  140),
+            new GridColumnPrefs.ColDef("details",     "備註"),
+        }, UserPrefs);
+
+        await LoadLogs();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _canView && !_prefsLoaded)
+        {
+            _prefsLoaded = true;
+            await _auditCols.LoadAsync(JS);
+            await LoadFiltersAsync();   // 還原上次篩選條件（覆蓋 today 預設）
+            StateHasChanged();
+        }
+    }
+
+    // ── Actions ───────────────────────────────────────────────────────────
+    private async Task LoadLogs()
+    {
+        try { _logs = (await AuditSvc.GetRecentLogsAsync(500)).ToList(); }
+        catch { _logs = new(); }
+    }
+
+    private async Task OnDateFromChanged(DateTime? v)
+    {
+        _dateFrom = v;
+        if (v.HasValue && (!_dateTo.HasValue || _dateTo.Value.Date < v.Value.Date))
+            _dateTo = v;
+        PruneSelectedTypes();
+        _page = 0;
+        await SaveFiltersAsync();
+    }
+
+    private async Task OnDateToChanged(DateTime? v)
+    {
+        _dateTo = v;
+        PruneSelectedTypes();
+        _page = 0;
+        await SaveFiltersAsync();
+    }
+
+    private async Task OnTypesChanged(IEnumerable<string> v)
+    {
+        _selectedTypes = v?.ToList() ?? new();
+        _page = 0;
+        await SaveFiltersAsync();
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+        _page = 0;
+        await SaveFiltersAsync();
+    }
+
+    private void PruneSelectedTypes()
+    {
+        var available = AvailableTypes.ToHashSet();
+        _selectedTypes.RemoveAll(t => !available.Contains(t));
+    }
+
+    private async Task ClearAllFilters()
+    {
+        _dateFrom           = DateTime.Today;
+        _dateTo             = DateTime.Today;
+        _selectedTypes      = new();
+        _search             = string.Empty;
+        _filterPerformedAt  = string.Empty;
+        _filterEntityType   = string.Empty;
+        _filterEntityId     = string.Empty;
+        _filterEntityName   = string.Empty;
+        _filterAction       = string.Empty;
+        _filterPerformedBy  = string.Empty;
+        _filterDetails      = string.Empty;
+        _page               = 0;
+        await JS.InvokeVoidAsync("localStorage.removeItem", FilterStorageKey);
+    }
+
+    // ── Filter persistence (localStorage) ────────────────────────────────
+    private const string FilterStorageKey = "kanban:report-filters";
+
+    private async Task SaveFiltersAsync()
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(new
+            {
+                DateFrom      = _dateFrom,
+                DateTo        = _dateTo,
+                SelectedTypes = _selectedTypes,
+                Search        = _search,
+            });
+            await JS.InvokeVoidAsync("localStorage.setItem", FilterStorageKey, json);
+        }
+        catch { }
+    }
+
+    private async Task LoadFiltersAsync()
+    {
+        try
+        {
+            var raw = await JS.InvokeAsync<string?>("localStorage.getItem", FilterStorageKey);
+            if (string.IsNullOrEmpty(raw)) return;
+            using var doc  = JsonDocument.Parse(raw);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("DateFrom", out var df) && df.ValueKind != JsonValueKind.Null)
+                _dateFrom = df.GetDateTime();
+            if (root.TryGetProperty("DateTo", out var dt) && dt.ValueKind != JsonValueKind.Null)
+                _dateTo = dt.GetDateTime();
+            if (root.TryGetProperty("SelectedTypes", out var st) && st.ValueKind == JsonValueKind.Array)
+                _selectedTypes = st.EnumerateArray()
+                                   .Select(e => e.GetString() ?? "")
+                                   .Where(s => !string.IsNullOrEmpty(s))
+                                   .ToList();
+            if (root.TryGetProperty("Search", out var sr) && sr.ValueKind == JsonValueKind.String)
+                _search = sr.GetString() ?? string.Empty;
+        }
+        catch { }
+    }
+
+    private async Task OnColResized(DataGridColumnResizedEventArgs<AuditLog> args)
+    {
+        _auditCols.SetWidth(TitleToId(args.Column.Title), args.Width);
+        await _auditCols.SaveAsync(JS);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+    private static string TitleToId(string? title) => title switch
+    {
+        "時間"     => "performedAt",
+        "類型"     => "entityType",
+        "ID"       => "entityId",
+        "對象名稱" => "entityName",
+        "操作"     => "action",
+        "執行者"   => "performedBy",
+        "備註"     => "details",
+        _          => title ?? string.Empty,
+    };
+
+    private static string GridPageSummary(int page0, int size, int total)
+    {
+        var pages = total == 0 ? 1 : (int)Math.Ceiling((double)total / size);
+        return $"Page {page0 + 1} of {pages} ({total} Items)";
+    }
+
+    private static string TypeColor(string? type) => type switch
+    {
+        "設備"     => "#1565c0",
+        "資料來源" => "#6a1b9a",
+        "地圖"     => "#2e7d32",
+        "圖示"     => "#e65100",
+        _          => "#37474f",
+    };
+
+    private static string ChipStyle(string bg) =>
+        $"display:inline-flex;align-items:center;gap:4px;padding:2px 8px;" +
+        $"border-radius:12px;font-size:0.82em;background:{bg};color:#fff;" +
+        "border:none;white-space:nowrap";
+
+    private const string CloseBtn =
+        "background:transparent;border:none;color:rgba(255,255,255,.7);" +
+        "cursor:pointer;padding:0 0 0 2px;font-size:1em;line-height:1";
+
+    // 與字串欄位內建篩選輸入框視覺一致的 style（覆蓋 DateTime / int 欄位用）
+    private const string ColFilterStyle =
+        "width:100%;font-size:0.875rem;line-height:1.25rem;padding:0.25rem 0.5rem;" +
+        "box-sizing:border-box;outline:none;" +
+        "background:var(--rz-base-background-color,transparent);" +
+        "border:1px solid var(--rz-base-300,rgba(255,255,255,.2));" +
+        "color:var(--rz-text-color,#c8d8e8);" +
+        "border-radius:var(--rz-border-radius,4px)";
+}

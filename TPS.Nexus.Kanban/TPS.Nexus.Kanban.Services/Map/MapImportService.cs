@@ -107,6 +107,15 @@ public class MapImportService : IMapImportService
         }
     }
 
+    public async Task<bool> HasLayoutVersionsAsync(int mapId)
+    {
+        await using var conn = _db.CreateConnection();
+        var count = await conn.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM kanban_layout_versions WHERE FactoryMapId=@MapId",
+            new { MapId = mapId });
+        return count > 0;
+    }
+
     // Resolves a stored path (either a URL-relative path or an absolute temp path) to the
     // physical file and deletes it. Best-effort: IOException is swallowed so a missing file
     // does not abort the delete operation.

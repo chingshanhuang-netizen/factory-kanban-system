@@ -707,3 +707,31 @@ window.kanbanCanvas = {
         }
     }
 };
+
+window.kanbanKeyboard = {
+    _ref:     null,
+    _handler: null,
+
+    register: function (dotNetRef) {
+        window.kanbanKeyboard.unregister();
+        window.kanbanKeyboard._ref = dotNetRef;
+        window.kanbanKeyboard._handler = function (e) {
+            if (e.key !== ' ') return;
+            var tag = (e.target || e.srcElement).tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync('HandleSpaceKeyAsync');
+        };
+        document.addEventListener('keydown', window.kanbanKeyboard._handler);
+    },
+
+    unregister: function () {
+        if (window.kanbanKeyboard._handler) {
+            document.removeEventListener('keydown', window.kanbanKeyboard._handler);
+            window.kanbanKeyboard._handler = null;
+        }
+        if (window.kanbanKeyboard._ref) {
+            window.kanbanKeyboard._ref = null;
+        }
+    }
+};

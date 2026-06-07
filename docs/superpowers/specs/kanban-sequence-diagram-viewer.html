@@ -127,12 +127,8 @@
        font-size:0.8em;line-height:1.6;overflow:auto;max-width:900px;white-space:pre-wrap"></pre>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"
-        integrity="sha512-g2TeAWGtPoK8y9GkgsZQZiGF6HBMCLQ4mrJVOqFBb5qvlIMD4iJGh5GexGw0LKEcLCOvXJ5Y5/WFZOQX65CQ=="
-        crossorigin="anonymous"></script>
-
 <script>
-// ── PlantUML 自訂 Base64 編碼 ──────────────────────────────────
+// ── PlantUML 自訂 Base64 編碼（無外部依賴） ───────────────────
 const B64_TABLE = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_';
 
 function encode64(uint8arr) {
@@ -149,10 +145,26 @@ function encode64(uint8arr) {
   return result;
 }
 
-function encodePlantUML(text) {
-  const utf8  = new TextEncoder().encode(text);
-  const deflated = pako.deflateRaw(utf8, { level: 9 });
-  return encode64(deflated);
+// 使用瀏覽器內建 CompressionStream API（Chrome 80+、Edge 80+、Firefox 113+）
+// 不需要任何外部 JS 函式庫
+async function encodePlantUML(text) {
+  const utf8 = new TextEncoder().encode(text);
+  const cs = new CompressionStream('deflate-raw');
+  const writer = cs.writable.getWriter();
+  writer.write(utf8);
+  writer.close();
+  const chunks = [];
+  const reader = cs.readable.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const merged = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { merged.set(c, off); off += c.length; }
+  return encode64(merged);
 }
 
 function buildUrl(encoded, fmt) {
@@ -360,22 +372,23 @@ function setStatus(msg, isError) {
   el.style.color = isError ? '#f44336' : '#4fc3f7';
 }
 
-function render() {
+async function render() {
   const fmt = document.getElementById('fmt').value;
   document.getElementById('diagram-wrapper').style.display = 'none';
   document.getElementById('source-block').style.display = 'none';
   document.getElementById('loading').style.display = 'block';
-  setStatus('⏳ 正在編碼並連接 PlantUML 伺服器...');
+  setStatus('⏳ 正在壓縮編碼...');
 
   let encoded;
   try {
-    encoded = encodePlantUML(UML);
+    encoded = await encodePlantUML(UML);
   } catch (e) {
     document.getElementById('loading').style.display = 'none';
     setStatus('❌ 編碼失敗：' + e.message, true);
     return;
   }
 
+  setStatus('⏳ 正在從 plantuml.com 載入圖片...');
   currentUrl = buildUrl(encoded, fmt);
   const img = document.getElementById('diagram-img');
 
@@ -419,13 +432,12 @@ function toggleSource() {
   }
 }
 
-// 頁面載入後自動渲染
+// 頁面載入後自動渲染（使用瀏覽器內建 CompressionStream，無需外部 CDN）
 window.onload = function () {
-  if (typeof pako === 'undefined') {
-    setStatus('❌ pako.js 未載入，請確認網路連線（CDN）', true);
+  if (typeof CompressionStream === 'undefined') {
+    setStatus('❌ 瀏覽器不支援 CompressionStream API（請使用 Chrome 80+ / Edge 80+ / Firefox 113+）', true);
     document.getElementById('loading').innerHTML =
-      `<div class="error">❌ 無法載入 pako.js（需要網路連線）<br>
-       請確認能存取 cdnjs.cloudflare.com</div>`;
+      `<div class="error">❌ 瀏覽器版本過舊，請升級至 Chrome 80+ 或 Edge 80+</div>`;
     return;
   }
   render();
